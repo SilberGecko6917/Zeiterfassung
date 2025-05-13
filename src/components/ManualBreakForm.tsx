@@ -1,0 +1,127 @@
+'use client';
+
+import { useState } from 'react';
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { format } from 'date-fns';
+import { toast } from 'sonner';
+
+export function ManualBreakForm({ onBreakAdded }: { onBreakAdded?: () => void }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [startTime, setStartTime] = useState('12:00');
+  const [endTime, setEndTime] = useState('13:00');
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    try {
+      const response = await fetch('/api/time/manual-breaks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          date,
+          startTime,
+          endTime,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to add break');
+      }
+      
+      toast.success(`Break from ${startTime} to ${endTime} has been added.`);
+      
+      setIsOpen(false);
+      if (onBreakAdded) onBreakAdded();
+    } catch (error) {
+      console.error('Error adding break:', error);
+      toast.error(error instanceof Error ? error.message : "An unknown error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline">Add Break</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Add Manual Break</DialogTitle>
+            <DialogDescription>
+              Add a break period to your time tracking.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid items-center grid-cols-4 gap-4">
+              <Label htmlFor="date" className="text-right">
+                Date
+              </Label>
+              <Input
+                id="date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="col-span-3"
+                required
+              />
+            </div>
+            <div className="grid items-center grid-cols-4 gap-4">
+              <Label htmlFor="start-time" className="text-right">
+                Start Time
+              </Label>
+              <Input
+                id="start-time"
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="col-span-3"
+                required
+              />
+            </div>
+            <div className="grid items-center grid-cols-4 gap-4">
+              <Label htmlFor="end-time" className="text-right">
+                End Time
+              </Label>
+              <Input
+                id="end-time"
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                className="col-span-3"
+                required
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Adding..." : "Add Break"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

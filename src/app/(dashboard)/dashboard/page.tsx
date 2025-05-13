@@ -37,6 +37,7 @@ import { DateTimePicker24h } from "@/components/ui/datetime-picker";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { ManualBreakForm } from "@/components/ManualBreakForm";
 
 // Add type for time entries
 interface TimeEntry {
@@ -707,6 +708,7 @@ export default function Dashboard() {
                 <Clock className="mr-1 h-4 w-4" />
                 Manueller Eintrag
               </Button>
+              <ManualBreakForm />
             </div>
           </CardHeader>
           <CardContent>

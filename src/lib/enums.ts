@@ -101,7 +101,21 @@ export enum LogAction {
    * Automatic break was added
    */
   AUTO_BREAK_ADDED = "AUTO_BREAK_ADDED",
+
+  /**
+   * Break processed
+   */
   BREAKS_PROCESSED = "BREAKS_PROCESSED",
+
+  /**
+   * Break was added manually
+   */
+  MANUAL_BREAK_ADDED = "MANUAL_BREAK_ADDED",
+
+  /**
+   * Break was deleted
+   */
+  BREAK_DELETED = "BREAK_DELETED",
 }
 
 /**
