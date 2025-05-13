@@ -128,11 +128,6 @@ export async function DELETE(
       where: { userId },
     });
 
-    // Delete user's sessions
-    await prisma.session.deleteMany({
-      where: { userId },
-    });
-
     // Delete user
     await prisma.user.delete({
       where: { id: userId },
