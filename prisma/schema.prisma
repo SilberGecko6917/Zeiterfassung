@@ -13,14 +13,6 @@ datasource db {
   url      = "file:./data.db"
 }
 
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
 model User {
   id       String   @id @default(cuid())
   name     String?
@@ -30,7 +22,6 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sessions Session[]
   TrackedTime TrackedTime[]
   Log Log[]
   breakSettings UserBreakSettings?
@@ -89,8 +80,8 @@ model Vacation {
   userId      String
   startDate   DateTime
   endDate     DateTime
-  days        Int      // Anzahl der Urlaubstage
-  status      String   @default("pending") // "pending", "approved", "rejected"
+  days        Int
+  status      String   @default("pending")
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
