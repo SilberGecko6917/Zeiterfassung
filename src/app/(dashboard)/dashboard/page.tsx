@@ -632,40 +632,47 @@ export default function Dashboard() {
                     DayContent: (props) => {
                       // Check if the date is a vacation day
                       const isVacationDay = vacations
-                        .filter((v) => v.status === "approved")
-                        .some((v) => {
+                        .filter(v => v.status === "approved")
+                        .some(v => {
                           try {
+                            // Vacation start and end dates
                             const start = new Date(v.startDate);
+                            start.setHours(0, 0, 0, 0);
+                            
                             const end = new Date(v.endDate);
-                            // Check if the date is a weekday (Monday to Friday)
-                            const day = props.date.getDay();
+                            end.setHours(23, 59, 59, 999);
+                            
+                            // Current date
+                            const currentDate = new Date(props.date);
+                            currentDate.setHours(0, 0, 0, 0);
+                            
+                            // Check if the current date is a weekday (Monday to Friday)
+                            const day = currentDate.getDay();
                             const isWeekday = day > 0 && day < 6;
-
-                            return (
-                              isWeekday &&
-                              props.date >= start &&
-                              props.date <= end
-                            );
-                          } catch {
+                            
+                            // Check if the current date is within the vacation range
+                            return isWeekday && 
+                              currentDate >= start && 
+                              currentDate <= end;
+                          } catch (error) {
+                            console.error("Fehler beim Vergleich von Urlaubsdaten:", error);
                             return false;
                           }
                         });
-
-                      // Check if there are entries for today
+                      
+                      // Check if there are any time entries for today
                       const dateStr = format(props.date, "yyyy-MM-dd");
-                      const hasEntries = todaysEntries.some((entry) =>
+                      const hasEntries = todaysEntries.some(entry => 
                         entry.startTime.startsWith(dateStr)
                       );
-
+                      
                       return (
                         <div className="relative flex items-center justify-center h-9 w-9">
-                          <div
-                            className={`flex items-center justify-center rounded-full h-8 w-8 ${
-                              isVacationDay
-                                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 font-medium"
-                                : ""
-                            }`}
-                          >
+                          <div className={`flex items-center justify-center rounded-full h-8 w-8 ${
+                            isVacationDay 
+                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 font-medium" 
+                              : ""
+                          }`}>
                             {props.date.getDate()}
                           </div>
                           {hasEntries && !isVacationDay && (
@@ -676,7 +683,7 @@ export default function Dashboard() {
                           )}
                         </div>
                       );
-                    },
+                    }
                   }}
                 />
               </div>
