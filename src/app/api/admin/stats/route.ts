@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkIsAdmin } from "@/lib/server/auth-actions";
-import { startOfDay, endOfDay, startOfWeek } from "date-fns";
+import { startOfDay, endOfDay, startOfWeek, addDays } from "date-fns";
 
 export async function GET() {
   try {
@@ -92,11 +92,45 @@ export async function GET() {
 
     const weeklyHours = weeklySeconds / 3600;
 
+    // Find upcoming vacations for the next 30 days
+    const thirtyDaysFromNow = addDays(today, 30);
+    const upcomingVacations = await prisma.vacation.findMany({
+      where: {
+        status: "approved",
+        startDate: {
+          lte: thirtyDaysFromNow,
+        },
+        endDate: {
+          gte: today,
+        },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        startDate: "asc",
+      },
+    });
+
     return NextResponse.json({
       totalUsers,
       activeTracking,
       todayMinutesWorked,
       weeklyHours,
+      upcomingVacations: upcomingVacations.map(v => ({
+        id: v.id,
+        userId: v.userId,
+        userName: v.user?.name || "",
+        startDate: v.startDate.toISOString(),
+        endDate: v.endDate.toISOString(),
+        days: v.days,
+        status: v.status,
+      })),
     });
   } catch (error) {
     console.error("Error fetching admin statistics:", error);

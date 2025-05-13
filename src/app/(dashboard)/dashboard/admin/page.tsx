@@ -51,10 +51,13 @@ import {
   Download,
   Coffee,
   Save,
+  CalendarCheck,
+  CalendarX,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { UserData, TimeEntry, DashboardStats } from "@/types/dashboard";
+import { UserData, TimeEntry, DashboardStats, VacationData } from "@/types/dashboard";
 import { Switch } from "@/components/ui/switch";
 
 interface BreakSetting {
@@ -119,16 +122,12 @@ export default function AdminDashboard() {
   // Fetch logs
   const [logs, setLogs] = useState<any[]>([]);
 
-  // Füge diese States nach den vorhandenen State-Definitionen hinzu
   const [filteredUserId, setFilteredUserId] = useState<string | null>(null);
   const [filteredUserName, setFilteredUserName] = useState<string | null>(null);
 
   const [logDetailsOpen, setLogDetailsOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<any | null>(null);
-
-  // Füge diese States und Funktionen hinzu
-
-  // States für Export
+  // States for Export
   const [exportPeriod, setExportPeriod] = useState<"day" | "month" | "year">(
     "month"
   );
@@ -139,12 +138,15 @@ export default function AdminDashboard() {
     (UserData & { breakSettings?: BreakSetting })[]
   >([]);
 
+  // States for Vacations
+  const [vacations, setVacations] = useState<Array<VacationData & { user?: UserData }>>([]);
+  const [selectedVacation, setSelectedVacation] = useState<(VacationData & { user?: UserData }) | null>(null);
+  const [vacationDetailsOpen, setVacationDetailsOpen] = useState(false);
+
   // Export Funktion
   const handleExport = async () => {
     try {
       setExportLoading(true);
-
-      // Hier die Logik anpassen: Nur userId mitschicken, wenn nicht 'all'
       const userId = exportUserId !== "all" ? exportUserId : "";
 
       const response = await fetch(
@@ -254,7 +256,7 @@ export default function AdminDashboard() {
         "yyyy-MM-dd"
       )}&endDate=${format(endDate, "yyyy-MM-dd")}`;
 
-      // Wenn ein Benutzer gefiltert wird, füge die userId zum Request hinzu
+      // Filter by user if userId is set
       if (filteredUserId) {
         url += `&userId=${filteredUserId}`;
       }
@@ -263,7 +265,6 @@ export default function AdminDashboard() {
       const data = await response.json();
       setTimeEntries(data.entries || []);
 
-      // Zeige kurze Erfolgsmeldung
       if (filteredUserId) {
         toast.success(
           `Zeiteinträge für ${filteredUserName || "Benutzer"} geladen`
@@ -290,6 +291,7 @@ export default function AdminDashboard() {
         activeTracking: data.activeTracking || 0,
         todayMinutesWorked: data.todayMinutesWorked || 0,
         weeklyHours: data.weeklyHours || 0,
+        upcomingVacations: data.upcomingVacations || [],
       });
     } catch (error) {
       console.error("Failed to fetch dashboard stats:", error);
@@ -313,6 +315,55 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchVacations = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch("/api/admin/vacation");
+      const data = await response.json();
+      setVacations(data.vacations || []);
+    } catch (error) {
+      console.error("Failed to fetch vacations:", error);
+      toast.error("Fehler beim Laden der Urlaubsanträge");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVacationStatusChange = async (id: number, newStatus: string) => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`/api/admin/vacation/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to update vacation status");
+      }
+      
+      // Update local state
+      setVacationDetailsOpen(false);
+      fetchVacations();
+      
+      toast.success(`Urlaubsantrag ${
+        newStatus === "approved" ? "genehmigt" : "abgelehnt"
+      }`);
+    } catch (error) {
+      console.error("Error updating vacation status:", error);
+      toast.error("Fehler beim Aktualisieren des Urlaubsstatus");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleViewVacationDetails = (vacation: VacationData & { user?: UserData }) => {
+    setSelectedVacation(vacation);
+    setVacationDetailsOpen(true);
+  };
+
   // Load data based on active section
   useEffect(() => {
     if (isAdmin) {
@@ -324,13 +375,17 @@ export default function AdminDashboard() {
         fetchDashboardStats();
         fetchUsers();
         fetchTimeEntries();
+        fetchVacations();
       } else if (activeSection === "logs") {
         fetchLogs();
+      } else if (activeSection === "breaks") {
+        fetchBreakSettings();
+      } else if (activeSection === "vacations") {
+        fetchVacations();
       }
     }
   }, [isAdmin, activeSection, fetchTimeEntries, fetchUsers]);
 
-  // Setze den useEffect Hook, der auf Änderungen von filteredUserId reagiert
   useEffect(() => {
     if (activeSection === "activities") {
       fetchTimeEntries();
@@ -386,18 +441,16 @@ export default function AdminDashboard() {
     setDeleteDialogOpen(true);
   };
 
-  // Füge diese Funktion nach handleDeletePrompt hinzu
-
-  // Benutzerspezifische Aktivitäten anzeigen
+  // Display user activities
   const handleViewUserActivities = async (userId: string, userName: string) => {
-    // Speichere den aktuellen Benutzer im State
+    // Set the filtered user ID and name
     setFilteredUserId(userId);
     setFilteredUserName(userName);
 
-    // Wechsel zur Aktivitäten-Ansicht
+    // Set the active section to activities
     setActiveSection("activities");
 
-    // Direkt die Zeiteinträge mit dem Filter abrufen
+    // Fetch time entries for the selected user
     try {
       setIsLoading(true);
       const endDate = new Date();
@@ -565,7 +618,7 @@ export default function AdminDashboard() {
     }
   };
 
-  // Handler für das Öffnen des Dialogs zum Erstellen eines Zeiteintrags
+  // Open create time entry dialog
   const handleCreateTimeEntry = () => {
     setNewTimeEntryForm({
       userId: "",
@@ -577,7 +630,7 @@ export default function AdminDashboard() {
     setCreateTimeEntryDialogOpen(true);
   };
 
-  // Speichern eines neuen Zeiteintrags
+  // Save new time entry
   const handleSaveNewTimeEntry = async () => {
     try {
       setIsLoading(true);
@@ -655,20 +708,20 @@ export default function AdminDashboard() {
     }
   };
 
-  // Löschen eines Zeiteintrags
+  // Delete time entry
   const [deleteTimeEntryDialogOpen, setDeleteTimeEntryDialogOpen] =
     useState(false);
   const [timeEntryToDelete, setTimeEntryToDelete] = useState<TimeEntry | null>(
     null
   );
 
-  // Dialog zum Löschen eines Zeiteintrags öffnen
+  // Open delete time entry prompt
   const handleDeleteTimeEntryPrompt = (entry: TimeEntry) => {
     setTimeEntryToDelete(entry);
     setDeleteTimeEntryDialogOpen(true);
   };
 
-  // Zeitentrag löschen
+  // Delete time entry
   const handleDeleteTimeEntry = async () => {
     if (!timeEntryToDelete) return;
 
@@ -817,6 +870,19 @@ export default function AdminDashboard() {
                 Export
               </button>
             </li>
+            <li>
+              <button
+                onClick={() => setActiveSection("vacations")}
+                className={`flex items-center w-full px-4 py-3 rounded-md text-sm font-medium transition-colors ${
+                  activeSection === "vacations"
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-muted"
+                }`}
+              >
+                <Calendar className="mr-3 h-5 w-5" />
+                Urlaubsanträge
+              </button>
+            </li>
           </ul>
         </nav>
         <div className="border-t mt-auto absolute bottom-0 left-0 right-0 w-full">
@@ -878,6 +944,13 @@ export default function AdminDashboard() {
               onClick={() => setActiveSection("export")}
             >
               <Download className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant={activeSection === "vacations" ? "default" : "ghost"}
+              onClick={() => setActiveSection("vacations")}
+            >
+              <Calendar className="h-4 w-4" />
             </Button>
             <Link href="/dashboard">
               <Button size="sm" variant="outline">
@@ -1162,9 +1235,81 @@ export default function AdminDashboard() {
                   </Button>
                 </CardFooter>
               </Card>
+              {/* Upcoming Vacations */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Kommende Urlaube</CardTitle>
+                  <CardDescription>
+                    Genehmigte Urlaube der nächsten 30 Tage
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {stats.upcomingVacations && stats.upcomingVacations.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+                              Mitarbeiter
+                            </th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+                              Zeitraum
+                            </th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+                              Tage
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {stats.upcomingVacations.slice(0, 5).map((vacation) => (
+                            <tr
+                              key={vacation.id}
+                              className="border-b border-muted/60 hover:bg-muted/30"
+                            >
+                              <td className="py-3 px-4">{vacation.userName}</td>
+                              <td className="py-3 px-4">
+                                {format(new Date(vacation.startDate), "dd.MM.yyyy", { locale: de })} -<br />
+                                {format(new Date(vacation.endDate), "dd.MM.yyyy", { locale: de })}
+                              </td>
+                              <td className="py-3 px-4">{vacation.days} Tage</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-muted-foreground">
+                      Keine kommenden Urlaube in den nächsten 30 Tagen
+                    </div>
+                  )}
+                </CardContent>
+                <CardFooter className="border-t bg-muted/50 py-3">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setActiveSection("vacations")}
+                    className="ml-auto"
+                  >
+                    Alle anzeigen
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="ml-2 h-4 w-4"
+                    >
+                      <path d="M9 6l6 6-6 6"></path>
+                    </svg>
+                  </Button>
+                </CardFooter>
+              </Card>
             </div>
           )}
-
           {/* Users Section */}
           {activeSection === "users" && (
             <div className="space-y-6">
@@ -1909,10 +2054,103 @@ export default function AdminDashboard() {
               </Card>
             </div>
           )}
+          {/* Vacations Section */}
+          {activeSection === "vacations" && (
+            <div className="space-y-6">
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">Urlaubsanträge</h1>
+                <p className="text-muted-foreground mt-2">Verwalten Sie Urlaubsanträge der Mitarbeiter</p>
+              </div>
+              
+              <Card className="shadow-sm border-muted">
+                <CardContent className="p-0">
+                  {vacations.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-muted/40">
+                            <th className="text-left py-3 px-4 text-xs sm:text-sm font-medium text-muted-foreground">
+                              Mitarbeiter
+                            </th>
+                            <th className="text-left py-3 px-4 text-xs sm:text-sm font-medium text-muted-foreground">
+                              Zeitraum
+                            </th>
+                            <th className="text-left py-3 px-4 text-xs sm:text-sm font-medium text-muted-foreground">
+                              Tage
+                            </th>
+                            <th className="text-left py-3 px-4 text-xs sm:text-sm font-medium text-muted-foreground">
+                              Status
+                            </th>
+                            <th className="text-right py-3 px-4 text-xs sm:text-sm font-medium text-muted-foreground">
+                              Aktionen
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {vacations.map((vacation) => (
+                            <tr
+                              key={vacation.id}
+                              className="border-b border-muted/60 hover:bg-muted/30 transition-colors"
+                            >
+                              <td className="py-3 px-4 text-sm sm:text-base font-medium">
+                                {vacation.user?.name || "Unbekannt"}
+                              </td>
+                              <td className="py-3 px-4 text-sm sm:text-base">
+                                {format(new Date(vacation.startDate), "dd.MM.yyyy", { locale: de })} -<br />
+                                {format(new Date(vacation.endDate), "dd.MM.yyyy", { locale: de })}
+                              </td>
+                              <td className="py-3 px-4 text-sm sm:text-base">
+                                {vacation.days}
+                              </td>
+                              <td className="py-3 px-4 text-sm sm:text-base">
+                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                  vacation.status === "approved"
+                                    ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                    : vacation.status === "rejected"
+                                    ? "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                    : "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                }`}>
+                                  {vacation.status === "approved"
+                                    ? "Genehmigt"
+                                    : vacation.status === "rejected"
+                                    ? "Abgelehnt"
+                                    : "Ausstehend"}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-right">
+                                <div className="flex justify-end gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleViewVacationDetails(vacation)}
+                                    className="h-8 w-8"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                    <span className="sr-only">Details</span>
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <Calendar className="h-10 w-10 text-muted-foreground mb-4" />
+                      <p className="text-lg font-medium">Keine Urlaubsanträge vorhanden</p>
+                      <p className="text-muted-foreground mt-1">
+                        Es wurden noch keine Urlaubsanträge gestellt
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       </main>
 
-      {/* Dialogs remain the same as in your original code */}
       {/* User Create/Edit Dialog */}
       <Dialog open={userDialogOpen} onOpenChange={setUserDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
@@ -2579,6 +2817,106 @@ export default function AdminDashboard() {
           )}
           <DialogFooter>
             <Button onClick={() => setLogDetailsOpen(false)}>Schließen</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Vacation Details Dialog */}
+      <Dialog open={vacationDetailsOpen} onOpenChange={setVacationDetailsOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Urlaubsantrag</DialogTitle>
+            {selectedVacation && (
+              <DialogDescription>
+                Von {selectedVacation.user?.name || "Unbekannt"}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+          {selectedVacation && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-2">
+                <div className="font-medium">Zeitraum:</div>
+                <div className="col-span-2">
+                  {format(new Date(selectedVacation.startDate), "dd.MM.yyyy", { locale: de })} - {format(new Date(selectedVacation.endDate), "dd.MM.yyyy", { locale: de })}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="font-medium">Urlaubstage:</div>
+                <div className="col-span-2">{selectedVacation.days} Tage</div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="font-medium">Status:</div>
+                <div className="col-span-2">
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                    selectedVacation.status === "approved"
+                      ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                      : selectedVacation.status === "rejected"
+                      ? "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                      : "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                  }`}>
+                    {selectedVacation.status === "approved"
+                      ? "Genehmigt"
+                      : selectedVacation.status === "rejected"
+                      ? "Abgelehnt"
+                      : "Ausstehend"}
+                  </span>
+                </div>
+              </div>
+
+              {selectedVacation.description && (
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="font-medium">Bemerkung:</div>
+                  <div className="col-span-2">{selectedVacation.description}</div>
+                </div>
+              )}
+              
+              <div className="grid grid-cols-3 gap-2">
+                <div className="font-medium">Beantragt am:</div>
+                <div className="col-span-2">
+                  {format(new Date(selectedVacation.createdAt), "dd.MM.yyyy", { locale: de })}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="font-medium">Kontingent:</div>
+                <div className="col-span-2">
+                  {selectedVacation.user?.vacationDaysTaken || 0} von {selectedVacation.user?.vacationDaysPerYear || 30} Tagen genommen
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            {selectedVacation && selectedVacation.status === "pending" && (
+              <>
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800"
+                  onClick={() => handleVacationStatusChange(selectedVacation.id, "rejected")}
+                  disabled={isLoading}
+                >
+                  <CalendarX className="mr-2 h-4 w-4" />
+                  Ablehnen
+                </Button>
+                <Button
+                  className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
+                  onClick={() => handleVacationStatusChange(selectedVacation.id, "approved")}
+                  disabled={isLoading}
+                >
+                  <CalendarCheck className="mr-2 h-4 w-4" />
+                  Genehmigen
+                </Button>
+              </>
+            )}
+            {selectedVacation && selectedVacation.status !== "pending" && (
+              <Button
+                onClick={() => setVacationDetailsOpen(false)}
+                className="w-full sm:w-auto"
+              >
+                Schließen
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

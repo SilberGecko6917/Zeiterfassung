@@ -147,5 +147,14 @@ export enum LogEntity {
    * Break entity
    */
   BREAK = "BREAK",
+
+  /**
+   * Break settings entity
+   */
   BREAK_SETTINGS = "BREAK_SETTINGS",
+
+  /**
+   * Vacation entity
+   */
+  VACATION = "VACATION",
 }

@@ -19,9 +19,11 @@ import {
   X,
   Check,
   Trash,
+  Plus,
+  CalendarPlus,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { format, isSameDay } from "date-fns";
+import { format, isSameDay, addDays } from "date-fns";
 import { toast } from "sonner";
 import { de } from "date-fns/locale";
 import {
@@ -34,6 +36,7 @@ import {
 import { DateTimePicker24h } from "@/components/ui/datetime-picker";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 // Add type for time entries
 interface TimeEntry {
@@ -49,7 +52,15 @@ interface TimeEntry {
   isBreak?: boolean;
 }
 
-// Hilfsfunktion zum Überprüfen, ob ein Datum innerhalb der letzten 7 Tage liegt
+interface VacationData {
+  id: number;
+  startDate: string;
+  endDate: string;
+  days: number;
+  status: "approved" | "rejected" | "pending";
+}
+
+// Helper function to check if a date is within the last 7 days
 const isWithinLastSevenDays = (dateToCheck: Date): boolean => {
   const now = new Date();
   const sevenDaysAgo = new Date(now.setDate(now.getDate() - 7));
@@ -86,6 +97,20 @@ export default function Dashboard() {
   // State for deleting time entries
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState<TimeEntry | null>(null);
+
+  // State for vacations
+  const [vacations, setVacations] = useState<VacationData[]>([]);
+  const [vacationStats, setVacationStats] = useState({
+    totalDays: 30,
+    takenDays: 0,
+    remainingDays: 30,
+  });
+  const [vacationDialogOpen, setVacationDialogOpen] = useState(false);
+  const [vacationForm, setVacationForm] = useState({
+    startDate: format(new Date(), "yyyy-MM-dd"),
+    endDate: format(addDays(new Date(), 1), "yyyy-MM-dd"),
+    description: "",
+  });
 
   // Format time as HH:MM:SS
   const formatTime = (seconds: number) => {
@@ -158,6 +183,32 @@ export default function Dashboard() {
     loadEntries();
   }, [date, session]);
 
+  // Load vacation data
+  useEffect(() => {
+    const fetchVacations = async () => {
+      if (!session?.user) return;
+
+      try {
+        const response = await fetch("/api/vacation");
+        const data = await response.json();
+
+        if (response.ok) {
+          setVacations(data.vacations || []);
+          setVacationStats({
+            totalDays: data.totalDays || 30,
+            takenDays: data.takenDays || 0,
+            remainingDays: data.remainingDays || 30,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch vacation data:", error);
+        toast.error("Fehler beim Laden der Urlaubsdaten");
+      }
+    };
+
+    fetchVacations();
+  }, [session]);
+
   const handleStartTracking = async () => {
     try {
       setIsLoading(true);
@@ -218,7 +269,7 @@ export default function Dashboard() {
   const handleEditEntry = (entry: TimeEntry) => {
     const startDate = new Date(entry.startTime);
 
-    // Prüfe, ob der Zeiteintrag innerhalb der letzten 7 Tage liegt
+    // Check if the entry is within the last 7 days
     if (!isWithinLastSevenDays(startDate)) {
       toast.error(
         "Zeiteinträge können nur für die letzten 7 Tage bearbeitet werden"
@@ -240,7 +291,7 @@ export default function Dashboard() {
     try {
       setIsLoading(true);
 
-      // Prüfe, ob das neue Datum innerhalb der letzten 7 Tage liegt
+      // Check if the entry is within the last 7 days
       const now = new Date();
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(now.getDate() - 7);
@@ -257,7 +308,7 @@ export default function Dashboard() {
         );
       }
 
-      // Formatiere die Daten für den API-Request
+      // Create full datetime strings
       const startISOString = editStartDate.toISOString();
 
       if (!editEndDate) {
@@ -331,7 +382,7 @@ export default function Dashboard() {
     }
   };
 
-  // Dialog zum Erstellen eines Zeiteintrags öffnen
+  // Open dialog to create a new time entry
   const handleCreateEntryDialog = () => {
     const now = new Date();
     const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
@@ -390,11 +441,11 @@ export default function Dashboard() {
     }
   };
 
-  // Dialog zum Löschen eines Zeiteintrags öffnen
+  // Open delete confirmation dialog
   const handleDeletePrompt = (entry: TimeEntry) => {
     const startDate = new Date(entry.startTime);
 
-    // Prüfe, ob der Zeiteintrag innerhalb der letzten 7 Tage liegt
+    // Check if the entry is within the last 7 days
     if (!isWithinLastSevenDays(startDate)) {
       toast.error(
         "Zeiteinträge können nur für die letzten 7 Tage gelöscht werden"
@@ -406,7 +457,7 @@ export default function Dashboard() {
     setDeleteDialogOpen(true);
   };
 
-  // Zeitentrag löschen
+  // Delete time entry
   const handleDeleteEntry = async () => {
     if (!entryToDelete) return;
 
@@ -434,6 +485,50 @@ export default function Dashboard() {
       toast.success("Zeiteintrag gelöscht");
     } catch (error: any) {
       toast.error(error.message || "Fehler beim Löschen des Zeiteintrags");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle vacation request
+  const handleVacationRequest = async () => {
+    try {
+      setIsLoading(true);
+
+      const response = await fetch("/api/vacation", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          startDate: vacationForm.startDate,
+          endDate: vacationForm.endDate,
+          description: vacationForm.description,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Fehler beim Beantragen des Urlaubs");
+      }
+
+      // Close dialog
+      setVacationDialogOpen(false);
+
+      // Reload vacation data
+      const refreshResponse = await fetch("/api/vacation");
+      const refreshData = await refreshResponse.json();
+
+      setVacations(refreshData.vacations || []);
+      setVacationStats({
+        totalDays: refreshData.totalDays || 30,
+        takenDays: refreshData.takenDays || 0,
+        remainingDays: refreshData.remainingDays || 30,
+      });
+
+      toast.success("Urlaubsantrag erfolgreich eingereicht");
+    } catch (error: any) {
+      toast.error(error.message || "Fehler beim Beantragen des Urlaubs");
     } finally {
       setIsLoading(false);
     }
@@ -525,7 +620,6 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {/* Header with Calendar and Time Tracking Buttons */}
             <div className="flex flex-col sm:flex-row justify-between gap-2">
               <div>
                 <Calendar
@@ -534,6 +628,56 @@ export default function Dashboard() {
                   onSelect={(newDate) => newDate && setDate(newDate)}
                   className="border rounded-md p-3"
                   locale={de}
+                  components={{
+                    DayContent: (props) => {
+                      // Check if the date is a vacation day
+                      const isVacationDay = vacations
+                        .filter((v) => v.status === "approved")
+                        .some((v) => {
+                          try {
+                            const start = new Date(v.startDate);
+                            const end = new Date(v.endDate);
+                            // Check if the date is a weekday (Monday to Friday)
+                            const day = props.date.getDay();
+                            const isWeekday = day > 0 && day < 6;
+
+                            return (
+                              isWeekday &&
+                              props.date >= start &&
+                              props.date <= end
+                            );
+                          } catch {
+                            return false;
+                          }
+                        });
+
+                      // Check if there are entries for today
+                      const dateStr = format(props.date, "yyyy-MM-dd");
+                      const hasEntries = todaysEntries.some((entry) =>
+                        entry.startTime.startsWith(dateStr)
+                      );
+
+                      return (
+                        <div className="relative flex items-center justify-center h-9 w-9">
+                          <div
+                            className={`flex items-center justify-center rounded-full h-8 w-8 ${
+                              isVacationDay
+                                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 font-medium"
+                                : ""
+                            }`}
+                          >
+                            {props.date.getDate()}
+                          </div>
+                          {hasEntries && !isVacationDay && (
+                            <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-primary rounded-full"></div>
+                          )}
+                          {isVacationDay && (
+                            <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-4 h-1 bg-green-500 rounded-full"></div>
+                          )}
+                        </div>
+                      );
+                    },
+                  }}
                 />
               </div>
             </div>
@@ -670,6 +814,189 @@ export default function Dashboard() {
                 Keine Zeiteinträge für diesen Tag
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Enlarged Vacation Overview Card */}
+        <Card className="md:col-span-3">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle className="flex items-center">
+                <CalendarIcon className="mr-2 h-5 w-5" />
+                Urlaubsübersicht
+              </CardTitle>
+              <Button
+                onClick={() => setVacationDialogOpen(true)}
+                variant="outline"
+                size="sm"
+              >
+                <Plus className="mr-1 h-4 w-4" />
+                Urlaub beantragen
+              </Button>
+            </div>
+            <CardDescription>Ihr Urlaubskontingent und Anträge</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-muted/40 p-4 rounded-lg text-center">
+                  <div className="text-muted-foreground mb-1">Gesamt</div>
+                  <div className="text-3xl font-bold">
+                    {vacationStats.totalDays}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Urlaubstage
+                  </div>
+                </div>
+                <div className="bg-muted/40 p-4 rounded-lg text-center">
+                  <div className="text-muted-foreground mb-1">Genommen</div>
+                  <div className="text-3xl font-bold">
+                    {vacationStats.takenDays}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Urlaubstage
+                  </div>
+                </div>
+                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg text-center">
+                  <div className="text-muted-foreground mb-1">Verbleibend</div>
+                  <div className="text-3xl font-bold text-green-600 dark:text-green-400">
+                    {vacationStats.remainingDays}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Urlaubstage
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Urlaubsnutzung</span>
+                  <span>
+                    {Math.round(
+                      (vacationStats.takenDays / vacationStats.totalDays) * 100
+                    )}
+                    %
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2.5">
+                  <div
+                    className="bg-primary h-2.5 rounded-full"
+                    style={{
+                      width: `${
+                        (vacationStats.takenDays / vacationStats.totalDays) *
+                        100
+                      }%`,
+                    }}
+                  ></div>
+                </div>
+              </div>
+
+              {/* Vacation request history list */}
+              <div>
+                <h3 className="text-base font-medium mb-3">
+                  Ihre Urlaubsanträge
+                </h3>
+                {vacations.length > 0 ? (
+                  <div className="overflow-x-auto border rounded-lg">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-muted/50 border-b">
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground">
+                            Zeitraum
+                          </th>
+                          <th className="text-center py-3 px-4 text-xs font-semibold text-muted-foreground">
+                            Tage
+                          </th>
+                          <th className="text-center py-3 px-4 text-xs font-semibold text-muted-foreground">
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {vacations.map((vacation) => {
+                          // Parse the start and end dates
+                          const startDate = new Date(vacation.startDate);
+                          const endDate = new Date(vacation.endDate);
+                          const isValidDate =
+                            !isNaN(startDate.getTime()) &&
+                            !isNaN(endDate.getTime());
+
+                          return (
+                            <tr
+                              key={vacation.id}
+                              className="border-b hover:bg-muted/30 transition-colors"
+                            >
+                              <td className="py-3 px-4">
+                                {isValidDate ? (
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">
+                                      {format(startDate, "dd.MM.yyyy", {
+                                        locale: de,
+                                      })}{" "}
+                                      -{" "}
+                                      {format(endDate, "dd.MM.yyyy", {
+                                        locale: de,
+                                      })}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground mt-1">
+                                      {format(startDate, "EEEE", {
+                                        locale: de,
+                                      })}{" "}
+                                      bis{" "}
+                                      {format(endDate, "EEEE", { locale: de })}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  "Ungültiges Datum"
+                                )}
+                              </td>
+                              <td className="py-3 px-4 text-center font-medium">
+                                {vacation.days}
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="flex justify-center">
+                                  <span
+                                    className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+                                      vacation.status === "approved"
+                                        ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                        : vacation.status === "rejected"
+                                        ? "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                        : "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                    }`}
+                                  >
+                                    {vacation.status === "approved"
+                                      ? "Genehmigt"
+                                      : vacation.status === "rejected"
+                                      ? "Abgelehnt"
+                                      : "Ausstehend"}
+                                  </span>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-8 border rounded-lg bg-muted/10">
+                    <CalendarIcon className="h-10 w-10 text-muted-foreground mb-3" />
+                    <p className="text-muted-foreground text-center">
+                      Sie haben noch keine Urlaubsanträge gestellt
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={() => setVacationDialogOpen(true)}
+                      className="mt-4"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Ersten Urlaub beantragen
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -938,6 +1265,142 @@ export default function Dashboard() {
                 <>
                   <Trash className="mr-2 h-4 w-4" />
                   Löschen
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Request Vacation Dialog */}
+      <Dialog open={vacationDialogOpen} onOpenChange={setVacationDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Urlaub beantragen</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-6 py-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="startDate">Erster Urlaubstag</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={vacationForm.startDate}
+                  onChange={(e) =>
+                    setVacationForm({
+                      ...vacationForm,
+                      startDate: e.target.value,
+                    })
+                  }
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="endDate">Letzter Urlaubstag</Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={vacationForm.endDate}
+                  onChange={(e) =>
+                    setVacationForm({
+                      ...vacationForm,
+                      endDate: e.target.value,
+                    })
+                  }
+                  className="w-full"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Bemerkung (optional)</Label>
+              <Textarea
+                id="description"
+                value={vacationForm.description}
+                onChange={(e) =>
+                  setVacationForm({
+                    ...vacationForm,
+                    description: e.target.value,
+                  })
+                }
+                className="w-full"
+                placeholder="z.B. Familienurlaub"
+                rows={3}
+              />
+            </div>
+
+            {/* Calculate Vacation days */}
+            {(() => {
+              try {
+                const start = new Date(vacationForm.startDate);
+                const end = new Date(vacationForm.endDate);
+
+                // Calculate the number of days between start & end (Mo-Fr)
+                let days = 0;
+                const current = new Date(start);
+                while (current <= end) {
+                  const dayOfWeek = current.getDay();
+                  if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                    days++;
+                  }
+                  current.setDate(current.getDate() + 1);
+                }
+
+                return (
+                  <div className="bg-muted rounded-md p-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">Urlaubstage (Mo-Fr):</span>
+                      <span
+                        className={`font-mono ${
+                          days <= 0
+                            ? "text-destructive"
+                            : days <= vacationStats.remainingDays
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-amber-600 dark:text-amber-400"
+                        }`}
+                      >
+                        {days <= 0
+                          ? "Ungültiger Zeitraum"
+                          : days === 1
+                          ? "1 Tag"
+                          : `${days} Tage`}
+                      </span>
+                    </div>
+                    {days > vacationStats.remainingDays && (
+                      <div className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+                        Warnung: Der Antrag überschreitet Ihre verbleibenden
+                        Urlaubstage ({vacationStats.remainingDays}).
+                      </div>
+                    )}
+                  </div>
+                );
+              } catch {
+                return null;
+              }
+            })()}
+          </div>
+          <DialogFooter className="sm:justify-between">
+            <Button
+              variant="outline"
+              onClick={() => setVacationDialogOpen(false)}
+              disabled={isLoading}
+              className="hidden sm:flex"
+            >
+              Abbrechen
+            </Button>
+            <Button
+              onClick={handleVacationRequest}
+              disabled={isLoading}
+              className="w-full sm:w-auto"
+            >
+              {isLoading ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin mr-2 h-4 w-4 border-2 border-b-transparent rounded-full" />
+                  <span>Speichern...</span>
+                </div>
+              ) : (
+                <>
+                  <CalendarPlus className="mr-2 h-4 w-4" />
+                  Urlaub beantragen
                 </>
               )}
             </Button>
