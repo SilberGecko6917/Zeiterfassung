@@ -4,11 +4,11 @@
 ## Instalation
 1. Clon das Project
 ```run
-git clone https://github.com/SilberGecko6917/Zeiterfassung
+git clone https://github.com/SilberGecko6917/Zeiterfassung.git
 ```
 2. Installier die NodeJS requirements
 ```run
-cd zeiterfassung 
+cd zeiterfassung
 npm i --legacy-peer-deps
 ```
 3. Erstelle eine `.env.production` mit hilfe der `.env.example`
