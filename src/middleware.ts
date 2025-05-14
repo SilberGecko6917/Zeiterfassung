@@ -27,9 +27,24 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  if (pathname === "/" && process.env.NEXT_PUBLIC_REMOVE_LANDING === "True") {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  if (pathname === "/login" && process.env.NEXT_PUBLIC_LOGIN_REDIRECT === "True") {
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
+
+    if (token) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/api/install/:path*"],
+  matcher: ["/", "/dashboard/:path*", "/api/install/:path*", "/install/:path*", "/login"],
 };
