@@ -53,6 +53,11 @@ export async function POST(request: Request) {
       },
     });
 
+    const breakEntryFormatted = {
+      ...breakEntry,
+      duration: Number(breakDurationSeconds),
+    }
+
     // Log this action
     await prisma.log.create({
       data: {
@@ -71,7 +76,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      break: breakEntry,
+      break: breakEntryFormatted,
     });
   } catch (error) {
     console.error("Error adding manual break:", error);
