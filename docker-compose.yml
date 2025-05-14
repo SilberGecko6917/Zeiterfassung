@@ -12,5 +12,4 @@ services:
       - ./next.config.ts:/app/next.config.ts
       - ./prisma:/app/prisma
       - ./scripts:/app/scripts
-    
-    
+
