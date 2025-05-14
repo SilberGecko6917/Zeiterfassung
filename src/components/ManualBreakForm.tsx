@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { Coffee } from 'lucide-react';
 
 export function ManualBreakForm({ onBreakAdded }: { onBreakAdded?: () => void }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -61,20 +62,20 @@ export function ManualBreakForm({ onBreakAdded }: { onBreakAdded?: () => void })
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">Add Break</Button>
+        <Button variant="outline"><Coffee /> Pause Eintragen</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Add Manual Break</DialogTitle>
+            <DialogTitle>Trage eine pause ein</DialogTitle>
             <DialogDescription>
-              Add a break period to your time tracking.
+              Bitte gib das Datum und die Uhrzeit der Pause an. Die Pause wird in der Zeiterfassung gespeichert.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid items-center grid-cols-4 gap-4">
               <Label htmlFor="date" className="text-right">
-                Date
+                Datum
               </Label>
               <Input
                 id="date"
@@ -87,7 +88,7 @@ export function ManualBreakForm({ onBreakAdded }: { onBreakAdded?: () => void })
             </div>
             <div className="grid items-center grid-cols-4 gap-4">
               <Label htmlFor="start-time" className="text-right">
-                Start Time
+                Startzeit
               </Label>
               <Input
                 id="start-time"
@@ -100,7 +101,7 @@ export function ManualBreakForm({ onBreakAdded }: { onBreakAdded?: () => void })
             </div>
             <div className="grid items-center grid-cols-4 gap-4">
               <Label htmlFor="end-time" className="text-right">
-                End Time
+                Endzeit
               </Label>
               <Input
                 id="end-time"
@@ -114,10 +115,10 @@ export function ManualBreakForm({ onBreakAdded }: { onBreakAdded?: () => void })
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
-              Cancel
+              Abbrechen
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Adding..." : "Add Break"}
+              {isLoading ? "Wird Eingetragen..." : "Pause Eintragen"}
             </Button>
           </DialogFooter>
         </form>

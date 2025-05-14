@@ -538,7 +538,8 @@ export default function Dashboard() {
   // Calculate total hours worked today
   const totalSecondsWorked =
     todaysEntries.reduce((total, entry) => {
-      return total + entry.duration;
+      // Only add to total if it's not a break entry
+      return entry.isBreak ? total : total + entry.duration;
     }, 0) + (isTracking ? elapsedTime : 0);
 
   return (
@@ -699,16 +700,18 @@ export default function Dashboard() {
               <CardTitle>
                 Zeiteinträge für {format(date, "dd. MMMM yyyy", { locale: de })}
               </CardTitle>
-              <Button
-                onClick={handleCreateEntryDialog}
-                variant="outline"
-                size="sm"
-                disabled={isLoading}
-              >
-                <Clock className="mr-1 h-4 w-4" />
-                Manueller Eintrag
-              </Button>
-              <ManualBreakForm />
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={handleCreateEntryDialog}
+                  variant="outline"
+                  size="sm"
+                  disabled={isLoading}
+                >
+                  <Clock className="mr-1 h-4 w-4" />
+                  Manueller Eintrag
+                </Button>
+                <ManualBreakForm />
+              </div>
             </div>
           </CardHeader>
           <CardContent>
