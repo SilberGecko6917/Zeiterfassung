@@ -51,8 +51,8 @@ export default function Home() {
               <Button>Dashboard</Button>
             </Link>
           ) : (
-            <Link href="/register">
-              <Button>Registrieren</Button>
+            <Link href="/login">
+              <Button>Einloggen</Button>
             </Link>
           )}
         </div>
@@ -95,10 +95,10 @@ export default function Home() {
                 </Button>
               </Link>
             ) : (
-              <Link href="/register">
+              <Link href="/login">
                 <Button size="lg" className="gap-2">
                   <Clock className="h-5 w-5" />
-                  Registrieren
+                  Einloggen
                 </Button>
               </Link>
             )}
