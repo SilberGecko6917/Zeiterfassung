@@ -5,13 +5,6 @@ let taskRegistered = false;
 
 async function processBreaksForDate(targetDate: Date) {
   try {
-    console.log(
-      `Running automatic break distribution for ${format(
-        targetDate,
-        "yyyy-MM-dd"
-      )}`
-    );
-
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const response = await fetch(`${baseUrl}/api/time/auto-breaks`, {
       method: "POST",
