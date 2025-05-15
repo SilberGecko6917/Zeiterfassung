@@ -53,6 +53,11 @@ docker compose up -d
    NEXT_PUBLIC_LOGIN_REDIRECT=False
    ```
 
+## Updating
+```run
+sudo ./update.sh
+```
+
 ### Development
 ```run
 npm i --legacy-peer-deps
