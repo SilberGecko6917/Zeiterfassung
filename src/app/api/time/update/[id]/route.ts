@@ -20,7 +20,7 @@ export async function PUT(
       return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
     }
 
-    // Überprüfe, ob der Eintrag existiert und dem aktuellen Benutzer gehört
+    // Check if the entry exists and belongs to the user
     const existingEntry = await prisma.trackedTime.findUnique({
       where: { id: entryId },
     });
@@ -36,7 +36,7 @@ export async function PUT(
       );
     }
 
-    // Überprüfen, ob der Eintrag innerhalb der letzten 7 Tage liegt
+    // Check if the entry is older than 7 days
     const entryDate = new Date(existingEntry.startTime);
     const now = new Date();
     const sevenDaysAgo = new Date(now.setDate(now.getDate() - 7));
@@ -62,7 +62,7 @@ export async function PUT(
     const start = new Date(startTime);
     const end = new Date(endTime);
 
-    // Prüfe ob das neue Startdatum innerhalb der letzten 7 Tage liegt
+    // Check if the start and end times are valid dates
     if (start < sevenDaysAgo) {
       return NextResponse.json(
         { error: "Time entries can only be set within the last 7 days" },
