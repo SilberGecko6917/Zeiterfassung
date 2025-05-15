@@ -2,6 +2,9 @@
 
 A modern time tracking system built with Next.js.
 
+> [!IMPORTANT]
+> Please report **Bugs** and **Feature Requests** using the [Github Issue Forum](https://github.com/SilberGecko6917/Zeiterfassung/issues/new)
+
 ~ Developed by [SilberGecko](https://github.com/silbergecko6917)
 
 ## Features
