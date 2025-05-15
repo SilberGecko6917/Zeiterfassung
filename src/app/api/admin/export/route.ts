@@ -4,20 +4,27 @@ import { checkIsAdmin } from "@/lib/server/auth-actions";
 import { format, subDays, subMonths, subYears } from "date-fns";
 import * as ExcelJS from "exceljs";
 
+interface UserSummary {
+  name: string;
+  email: string;
+  totalDuration: number;
+  totalBreakDuration: number;
+  entryCount: number;
+}
+
 export async function GET(request: NextRequest) {
   try {
-    // Administratorzugriff prüfen
+    // Check if user is admin
     const isAdmin = await checkIsAdmin();
     if (!isAdmin) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    // Parameter aus der URL abrufen
+    // Get query parameters
     const url = new URL(request.url);
     const period = url.searchParams.get("period") || "month";
     const userId = url.searchParams.get("userId") || undefined;
 
-    // Zeitraum berechnen
     let startDate = new Date();
     const endDate = new Date();
 
@@ -35,7 +42,7 @@ export async function GET(request: NextRequest) {
         startDate = subMonths(endDate, 1);
     }
 
-    // Zeiteinträge abrufen
+    // Get time entries from database
     const timeEntries = await prisma.trackedTime.findMany({
       where: {
         startTime: {
@@ -56,76 +63,191 @@ export async function GET(request: NextRequest) {
       orderBy: [{ user: { name: "asc" } }, { startTime: "asc" }],
     });
 
-    // Excel-Workbook erstellen
+    // Create a new Excel workbook
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = "Zeiterfassung";
+    workbook.creator = "Zeiterfassung System";
     workbook.created = new Date();
-
-    // Arbeitsblatt erstellen
+    workbook.modified = new Date();
+    workbook.lastPrinted = new Date();
+    
+    // Create overview sheet
+    const summarySheet = workbook.addWorksheet("Übersicht");
+    
+    // Create header row
+    summarySheet.mergeCells('A1:G1');
+    const titleRow = summarySheet.getCell('A1');
+    titleRow.value = "ARBEITSZEITNACHWEIS";
+    titleRow.font = { size: 16, bold: true };
+    titleRow.alignment = { horizontal: 'center' };
+    
+    summarySheet.mergeCells('A2:G2');
+    const periodRow = summarySheet.getCell('A2');
+    periodRow.value = `Zeitraum: ${format(startDate, "dd.MM.yyyy")} bis ${format(endDate, "dd.MM.yyyy")}`;
+    periodRow.font = { size: 12, italic: true };
+    periodRow.alignment = { horizontal: 'center' };
+    
+    summarySheet.mergeCells('A4:B4');
+    summarySheet.getCell('A4').value = "Erstellt am:";
+    summarySheet.getCell('A4').font = { bold: true };
+    
+    summarySheet.getCell('C4').value = format(new Date(), "dd.MM.yyyy HH:mm");
+    
+    const userSummary: Record<string, UserSummary> = {};
+    timeEntries.forEach(entry => {
+      const userId = entry.user?.id || 'unknown';
+      if (!userSummary[userId]) {
+        userSummary[userId] = {
+          name: entry.user?.name || 'Unbekannt',
+          email: entry.user?.email || '',
+          totalDuration: 0,
+          totalBreakDuration: 0,
+          entryCount: 0
+        };
+      }
+      
+      userSummary[userId].totalDuration += Number(entry.duration);
+      userSummary[userId].entryCount += 1;
+      
+      // Add break duration if entry is a break
+      if (entry.isBreak && entry.duration > 0) {
+        userSummary[userId].totalBreakDuration += Number(entry.duration || 0);
+      }
+    });
+    
+    // Create summary table
+    summarySheet.addRow([]);
+    summarySheet.addRow(['Mitarbeiter', 'E-Mail', 'Einträge', 'Arbeitszeit (h)', 'Pausenzeit (h)', 'Nettoarbeitszeit (h)']);
+    
+    // Header styling
+    const summaryHeaderRow = summarySheet.lastRow;
+    if (summaryHeaderRow) {
+      summaryHeaderRow.eachCell((cell) => {
+        cell.font = { bold: true };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF4472C4' }
+        };
+        cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+      });
+    }
+    
+    Object.values(userSummary).forEach(user => {
+      const totalHours = user.totalDuration / 3600;
+      const totalBreakHours = user.totalBreakDuration / 3600;
+      const netHours = totalHours - totalBreakHours;
+      
+      summarySheet.addRow([
+        user.name,
+        user.email,
+        user.entryCount,
+        totalHours.toFixed(2),
+        totalBreakHours.toFixed(2),
+        netHours.toFixed(2)
+      ]);
+    });
+    
+    // Worktime details sheet
     const worksheet = workbook.addWorksheet("Zeiteinträge");
 
-    // Header definieren
+    // Define Header
     worksheet.columns = [
-      { header: "Benutzer", key: "user", width: 25 },
+      { header: "Mitarbeiter", key: "user", width: 25 },
       { header: "E-Mail", key: "email", width: 30 },
       { header: "Datum", key: "date", width: 15 },
       { header: "Start", key: "start", width: 10 },
       { header: "Ende", key: "end", width: 10 },
       { header: "Dauer (h)", key: "duration", width: 12 },
-      { header: "Dauer (HH:MM:SS)", key: "durationFormatted", width: 15 },
+      { header: "Pausen (h)", key: "breakDuration", width: 12 },
+      { header: "Netto (h)", key: "netDuration", width: 12 },
+      { header: "Details", key: "details", width: 40 }
     ];
 
     // Header-Styling
-    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
     worksheet.getRow(1).fill = {
       type: "pattern",
       pattern: "solid",
-      fgColor: { argb: "FFE0E0E0" },
+      fgColor: { argb: "FF4472C4" },
     };
+    
+    // Alternate row coloring
+    worksheet.addConditionalFormatting({
+      ref: 'A2:I1000',
+      rules: [
+        {
+          type: 'expression',
+          formulae: ['MOD(ROW(),2)=0'],
+          priority: 1,
+          style: {
+            fill: {
+              type: 'pattern',
+              pattern: 'solid',
+              bgColor: {argb: 'FFE6F0FF'}
+            }
+          }
+        }
+      ]
+    });
 
-    // Daten hinzufügen
+    // Add data to worksheet
     timeEntries.forEach((entry) => {
       const startTime = new Date(entry.startTime);
       const endTime = entry.endTime ? new Date(entry.endTime) : new Date();
 
-      // Dauer in Stunden mit 2 Dezimalstellen
+      // Calculate duration in hours
       const durationHours = Number(entry.duration) / 3600;
-
-      // Dauer im Format HH:MM:SS
-      const hours = Math.floor(Number(entry.duration) / 3600);
-      const minutes = Math.floor((Number(entry.duration) % 3600) / 60);
-      const seconds = Number(entry.duration) % 60;
-      const durationFormatted = `${hours.toString().padStart(2, "0")}:${minutes
-        .toString()
-        .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+      
+      // Pausendauer berechnen
+      let totalBreakDuration = 0;
+      let breakDetails = '';
+      
+      if (entry.isBreak && entry.duration > 0) {
+        totalBreakDuration += Number(entry.duration || 0);
+        const breakStart = entry.startTime ? format(new Date(entry.startTime), "HH:mm") : "?";
+        const breakEnd = entry.endTime ? format(new Date(entry.endTime), "HH:mm") : "?";
+        breakDetails += `${breakStart}-${breakEnd} (${(Number(entry.duration || 0)/3600).toFixed(2)}h), `;
+        
+        if (breakDetails.length > 2) {
+          breakDetails = breakDetails.slice(0, -2); // Remove last comma and space
+        }
+      }
+      
+      const breakDurationHours = totalBreakDuration / 3600;
+      const netDurationHours = durationHours - breakDurationHours;
 
       worksheet.addRow({
         user: entry.user?.name || "Unbekannt",
         email: entry.user?.email || "",
         date: format(startTime, "dd.MM.yyyy"),
         start: format(startTime, "HH:mm"),
-        end: format(endTime, "HH:mm"),
+        end: entry.endTime ? format(endTime, "HH:mm") : "Läuft",
         duration: durationHours.toFixed(2),
-        durationFormatted,
+        breakDuration: breakDurationHours.toFixed(2),
+        netDuration: netDurationHours.toFixed(2),
+        details: breakDetails || "Keine Pausen"
       });
     });
 
-    // Automatische Filter aktivieren
+    // Auto-filter for the header row
     worksheet.autoFilter = {
       from: { row: 1, column: 1 },
-      to: { row: 1, column: 7 },
+      to: { row: 1, column: worksheet.columns.length },
     };
 
-    // Excel-Datei als Buffer speichern
+    // Save workbook to buffer
     const buffer = await workbook.xlsx.writeBuffer();
 
-    // Response mit Excel-Datei zurückgeben
+    // Return the buffer as a downloadable file
     return new NextResponse(buffer, {
       headers: {
         "Content-Type":
           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename=zeiterfassung-export-${format(
-          new Date(),
+        "Content-Disposition": `attachment; filename=Arbeitszeitnachweis-${format(
+          startDate,
+          "yyyy-MM-dd"
+        )}-bis-${format(
+          endDate,
           "yyyy-MM-dd"
         )}.xlsx`,
       },
