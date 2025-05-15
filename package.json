@@ -7,8 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "build:cron": "tsx scripts/build-cron.ts",
-    "process-breaks": "node scripts/dist/process-breaks.js"
+    "clear-cache": "rm -rf .next/cache"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
