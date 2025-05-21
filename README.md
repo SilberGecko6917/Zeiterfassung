@@ -27,7 +27,7 @@ A modern time tracking system built with Next.js.
 1. Clone the repository
 ```bash
 git clone https://github.com/SilberGecko6917/Zeiterfassung.git
-cd zeiterfassung
+cd Zeiterfassung
 ```
 2. Create a `.env.production` file using the template in `.env.example`
 ```run
