@@ -2,9 +2,9 @@
  * Represents a user role in the time tracking system.
  */
 export enum Role {
-  ADMIN = "admin",
-  MANAGER = "manager",
-  EMPLOYEE = "user",
+  ADMIN = "ADMIN",
+  MANAGER = "MANAGER",
+  EMPLOYEE = "USER",
 }
 
 /**
@@ -33,11 +33,11 @@ export const RoleUtils = {
       return null;
     }
     switch (role.toLowerCase()) {
-      case "admin":
+      case "ADMIN":
         return Role.ADMIN;
-      case "manager":
+      case "MANAGER":
         return Role.MANAGER;
-      case "user":
+      case "USER":
         return Role.EMPLOYEE;
       default:
         return null;

@@ -32,6 +32,7 @@ cd Zeiterfassung
 2. Create a `.env.production` file using the template in `.env.example`
 ```run
 cp .env.example .env.production
+nano .env.production
 ```
 3. Build and start the application
 ```run

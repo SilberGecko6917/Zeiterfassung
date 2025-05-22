@@ -3,7 +3,7 @@ export const PROJECT_DESCRIPTION = "Zeiterfassung";
 export const VERSION = "1.3";
 
 export enum Role {
-  ADMIN = "admin",
-  MANAGER = "manager",
-  EMPLOYEE = "user",
+  ADMIN = "ADMIN",
+  MANAGER = "MANAGER",
+  EMPLOYEE = "USER",
 }

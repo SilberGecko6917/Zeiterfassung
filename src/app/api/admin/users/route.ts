@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
         name,
         email,
         password: hashedPassword,
-        role: role || "user",
+        role: role || "USER",
       },
     });
 

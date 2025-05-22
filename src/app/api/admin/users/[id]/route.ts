@@ -49,7 +49,7 @@ export async function PUT(
     const updateData: any = {
       name,
       email,
-      role: role || "user",
+      role: role || "USER",
     };
 
     // Only update password if provided

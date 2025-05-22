@@ -90,7 +90,7 @@ export default function AdminDashboard() {
     name: "",
     email: "",
     password: "",
-    role: "user",
+    role: "USER",
   });
 
   // Delete confirmation dialog
@@ -417,7 +417,7 @@ export default function AdminDashboard() {
       name: "",
       email: "",
       password: "",
-      role: "user",
+      role: "USER",
     });
     setUserDialogOpen(true);
   };
@@ -487,7 +487,7 @@ export default function AdminDashboard() {
           body: JSON.stringify({
             name: newUser.name,
             email: newUser.email,
-            role: newUser.role,
+            role: newUser.role.toUpperCase(),
             ...(newUser.password ? { password: newUser.password } : {}),
           }),
         });
@@ -1187,14 +1187,14 @@ export default function AdminDashboard() {
                                   className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                                     user.role === "ADMIN"
                                       ? "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                                      : user.role === "manager"
+                                      : user.role === "MANAGER"
                                       ? "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
                                       : "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                                   }`}
                                 >
                                   {user.role === "ADMIN"
                                     ? "Admin"
-                                    : user.role === "manager"
+                                    : user.role === "MANAGER"
                                     ? "Manager"
                                     : "Benutzer"}
                                 </span>
@@ -1379,14 +1379,14 @@ export default function AdminDashboard() {
                                   className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                                     user.role === "ADMIN"
                                       ? "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                                      : user.role === "manager"
+                                      : user.role === "MANAGER"
                                       ? "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
                                       : "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                                   }`}
                                 >
                                   {user.role === "ADMIN"
                                     ? "Admin"
-                                    : user.role === "manager"
+                                    : user.role === "MANAGER"
                                     ? "Manager"
                                     : "Benutzer"}
                                 </span>
@@ -1773,14 +1773,14 @@ export default function AdminDashboard() {
                                     className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                                       log.user.role === "ADMIN"
                                         ? "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                                        : log.user.role === "manager"
+                                        : log.user.role === "MANAGER"
                                         ? "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
                                         : "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                                     }`}
                                   >
                                     {log.user.role === "ADMIN"
                                       ? "Admin"
-                                      : log.user.role === "manager"
+                                      : log.user.role === "MANAGER"
                                       ? "Manager"
                                       : "Benutzer"}
                                   </span>
@@ -2215,9 +2215,9 @@ export default function AdminDashboard() {
                   <SelectValue placeholder="Rolle auswählen" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user">Benutzer</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
-                  <SelectItem value="admin">Administrator</SelectItem>
+                  <SelectItem value="USER">Benutzer</SelectItem>
+                  <SelectItem value="MANAGER">Manager</SelectItem>
+                  <SelectItem value="ADMIN">Administrator</SelectItem>
                 </SelectContent>
               </Select>
             </div>
