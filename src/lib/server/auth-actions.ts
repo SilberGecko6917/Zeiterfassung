@@ -64,7 +64,7 @@ export async function checkIsManager(): Promise<boolean> {
     }
 
     // Check if the user's role is admin or manager
-    return user.role === "admin" || user.role === "manager";
+    return user.role === "ADMIN" || user.role === "MANAGER";
   } catch (error) {
     console.error("Error checking manager status:", error);
     return false;
