@@ -5,7 +5,7 @@ import { LogOutToggle } from "@/components/logout-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { checkIsAdmin } from "@/lib/server/auth-actions";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -15,8 +15,10 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { data: session, status } = useSession();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const isAdminPage = pathname === "/dashboard/admin";
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -35,7 +37,6 @@ export default function DashboardLayout({
       if (status === "authenticated") {
         try {
           const isAdminResult = await checkIsAdmin();
-
           setIsAdmin(isAdminResult);
         } catch (error) {
           console.error("Error checking admin access:", error);
@@ -65,10 +66,8 @@ export default function DashboardLayout({
   }
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <div className="absolute top-4 right-4">
-        {isAdmin && !window.location.pathname.includes("/admin") && (
-          <AdminButton />
-        )}
+      <div className="absolute top-4 right-4 flex items-center gap-2">
+        {isAdmin && !isAdminPage && <AdminButton />}
         <LogOutToggle />
         <ThemeToggle />
       </div>
