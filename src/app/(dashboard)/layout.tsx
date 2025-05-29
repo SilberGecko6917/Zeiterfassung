@@ -1,6 +1,6 @@
 "use client";
 
-import { AdminButton } from "@/components/admin-button";
+import AdminButton from "@/components/AdminButton";
 import { LogOutToggle } from "@/components/logout-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { checkIsAdmin } from "@/lib/server/auth-actions";
@@ -18,7 +18,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const isAdminPage = pathname === "/dashboard/admin";
+  const isAdminPage = pathname.startsWith("/dashboard/admin");
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -66,7 +66,11 @@ export default function DashboardLayout({
   }
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <div className="absolute top-4 right-4 flex items-center gap-2">
+      <div
+        className={`absolute top-4 right-4 flex items-center gap-2 ${
+          isAdminPage ? "md:flex hidden" : ""
+        }`}
+      >
         {isAdmin && !isAdminPage && <AdminButton />}
         <LogOutToggle />
         <ThemeToggle />

@@ -4,7 +4,7 @@ import { checkIsAdmin } from "@/lib/server/auth-actions";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Sidebar } from "@/components/dashboard/AdminSidebar";
+import { Sidebar } from "@/components/admin/AdminSidebar";
 
 export default function AdminLayout({
     children,
@@ -63,7 +63,7 @@ export default function AdminLayout({
                 <Sidebar />
             </div>
             <main className="flex-1 w-full mt-20 md:m-5 min-h-screen">
-                <div className="p-6 md:p-10 pt-16 md:pt-10">
+                <div className="pt-16 md:pt-5">
                     {children}
                 </div>
             </main>

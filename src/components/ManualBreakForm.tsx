@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useFormatting } from "@/hooks/useFormatting";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,16 +14,16 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { format } from 'date-fns';
+import { format, addMinutes } from 'date-fns';
 import { toast } from 'sonner';
 import { Coffee } from 'lucide-react';
 
 export function ManualBreakForm({ onBreakAdded }: { onBreakAdded?: () => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [startTime, setStartTime] = useState('12:00');
-  const [endTime, setEndTime] = useState('13:00');
+  const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [startTime, setStartTime] = useState(format(new Date(), "HH:mm"));
+  const [endTime, setEndTime] = useState(format(addMinutes(new Date(), 30), "HH:mm"));
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

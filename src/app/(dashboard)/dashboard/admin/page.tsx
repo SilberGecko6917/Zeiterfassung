@@ -1,29 +1,21 @@
 "use client";
 
+import { useEffect } from "react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { DashboardStats, TimeEntry, UserData } from "@/types/dashboard";
-import { format } from "date-fns";
-import { de } from "date-fns/locale";
-import { Calendar, Clock, PieChart, Users } from "lucide-react";
-import { useState } from "react";
+import { Calendar, ChevronRight, Clock, PieChart, Users } from "lucide-react";
+import Link from "next/link";
+import { useAdminDashboard } from "@/hooks/useAdminDashboard";
+import { useFormatting } from "@/hooks/useFormatting";
+import { formatDuration } from "@/lib/format-utils";
 
 export default function AdminHomePage() {
-  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
-  const [users, setUsers] = useState<UserData[]>([]);
-  const [stats, setStats] = useState<DashboardStats>({
-    totalUsers: 0,
-    activeTracking: 0,
-    todayMinutesWorked: 0,
-    weeklyHours: 0,
-  });
+  const { stats, users, timeEntries, isLoading, fetchData } = useAdminDashboard();
+  const { formatDate, formatTime } = useFormatting();
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   // Format minutes as readable time
   const formatMinutes = (minutes: number) => {
@@ -32,15 +24,22 @@ export default function AdminHomePage() {
     return `${hours}h ${mins}m`;
   };
 
-  // Format time as HH:MM:SS
-  const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${hours.toString().padStart(2, "0")}:${minutes
-      .toString()
-      .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  // Helper function to get user name by ID
+  const getUserName = (userId: string) => {
+    const user = users.find((u) => u.id === userId);
+    return user ? user.name : `Benutzer ${userId}`;
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full" />
+          <p className="text-muted-foreground">Lade Dashboard-Daten...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -160,23 +159,19 @@ export default function AdminHomePage() {
                       key={entry.id}
                       className="border-b border-muted/60 hover:bg-muted/30"
                     >
-                      <td className="py-3 px-4">{entry.userName}</td>
                       <td className="py-3 px-4">
-                        {format(new Date(entry.startTime), "dd.MM.yyyy", {
-                          locale: de,
-                        })}
+                        {getUserName(entry.userId)}
                       </td>
                       <td className="py-3 px-4">
-                        {format(new Date(entry.startTime), "HH:mm", {
-                          locale: de,
-                        })}{" "}
+                        {formatDate(entry.startTime)}
+                      </td>
+                      <td className="py-3 px-4">
+                        {formatTime(entry.startTime)}{" "}
                         -{" "}
-                        {format(new Date(entry.endTime), "HH:mm", {
-                          locale: de,
-                        })}
+                        {entry.endTime ? formatTime(entry.endTime) : "--:--"}
                       </td>
                       <td className="py-3 px-4 font-mono">
-                        {formatTime(entry.duration)}
+                        {formatDuration(Number(entry.duration))}
                         {entry.isBreak && (
                           <span className="ml-2 text-xs px-1.5 py-0.5 bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300 rounded-full">
                             Pause
@@ -194,29 +189,13 @@ export default function AdminHomePage() {
             </div>
           )}
         </CardContent>
-        <CardFooter className="border-t bg-muted/50 py-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setActiveSection("activities")}
-            className="ml-auto"
-          >
-            Alle anzeigen
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="ml-2 h-4 w-4"
-            >
-              <path d="M9 6l6 6-6 6"></path>
-            </svg>
-          </Button>
+        <CardFooter className="border-t bg-muted/50 py-6">
+          <Link href="/dashboard/admin/activities" className="ml-auto">
+            <Button variant="ghost" size="sm">
+              Alle anzeigen
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
         </CardFooter>
       </Card>
 
@@ -281,31 +260,16 @@ export default function AdminHomePage() {
             </div>
           )}
         </CardContent>
-        <CardFooter className="border-t bg-muted/50 py-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setActiveSection("users")}
-            className="ml-auto"
-          >
-            Alle anzeigen
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="ml-2 h-4 w-4"
-            >
-              <path d="M9 6l6 6-6 6"></path>
-            </svg>
-          </Button>
+        <CardFooter className="border-t bg-muted/50 py-6">
+          <Link href="/dashboard/admin/users" className="ml-auto">
+            <Button variant="ghost" size="sm">
+              Alle anzeigen
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
         </CardFooter>
       </Card>
+      
       {/* Upcoming Vacations */}
       <Card>
         <CardHeader>
@@ -339,13 +303,9 @@ export default function AdminHomePage() {
                     >
                       <td className="py-3 px-4">{vacation.userName}</td>
                       <td className="py-3 px-4">
-                        {format(new Date(vacation.startDate), "dd.MM.yyyy", {
-                          locale: de,
-                        })}{" "}
+                        {formatDate(new Date(vacation.startDate))}{" "}
                         -<br />
-                        {format(new Date(vacation.endDate), "dd.MM.yyyy", {
-                          locale: de,
-                        })}
+                        {formatDate(new Date(vacation.endDate))}
                       </td>
                       <td className="py-3 px-4">{vacation.days} Tage</td>
                     </tr>
@@ -355,33 +315,17 @@ export default function AdminHomePage() {
             </div>
           ) : (
             <div className="text-center py-6 text-muted-foreground">
-              Keine kommenden Urlaube in den nächsten 30 Tagen
+              Keine kommenden Urlaube in den nächsten 30 Tage
             </div>
           )}
         </CardContent>
-        <CardFooter className="border-t bg-muted/50 py-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setActiveSection("vacations")}
-            className="ml-auto"
-          >
-            Alle anzeigen
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="ml-2 h-4 w-4"
-            >
-              <path d="M9 6l6 6-6 6"></path>
-            </svg>
-          </Button>
+        <CardFooter className="border-t bg-muted/50 py-6">
+          <Link href="/dashboard/admin/vacations" className="ml-auto">
+            <Button variant="ghost" size="sm">
+              Alle anzeigen
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
         </CardFooter>
       </Card>
     </div>
