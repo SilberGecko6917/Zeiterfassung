@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Settings as RefreshCw, Building, FileText, Globe, Clock, ShieldUser, Save } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { SettingDefinition } from "@/lib/settings";
 import { PermissionManager } from "@/components/admin/PermissionManager";
 
@@ -260,7 +261,7 @@ export default function SettingsPage() {
           </TabsTrigger>
         </TabsList>
 
-        {["general", "appearance", "legal", "system", "localization", "permissions"].map(category => (
+        {["general", "appearance", "legal", "system", "localization"].map(category => (
           <TabsContent key={category} value={category} className="space-y-4">
             <Card>
               <CardHeader>
@@ -284,10 +285,17 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {settings
-                  .filter(setting => setting.category === category)
+                  .filter(setting => setting.category === category && setting.key !== "role_permissions")
                   .map((setting) => (
                     <div key={setting.key} className="grid gap-2">
-                      <Label htmlFor={setting.key}>{setting.label}</Label>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor={setting.key}>{setting.label}</Label>
+                        {setting.wip && (
+                          <Badge variant="default" className="text-xs bg-amber-500">
+                            WIP
+                          </Badge>
+                        )}
+                      </div>
                       {renderSettingInput(setting)}
                       {setting.description && (
                         <p className="text-xs text-muted-foreground mt-1">
@@ -297,7 +305,7 @@ export default function SettingsPage() {
                     </div>
                   ))}
                   
-                {settings.filter(setting => setting.category === category).length === 0 && (
+                {settings.filter(setting => setting.category === category && setting.key !== "role_permissions").length === 0 && (
                   <div className="text-center py-6 text-muted-foreground">
                     Keine Einstellungen in dieser Kategorie vorhanden
                   </div>

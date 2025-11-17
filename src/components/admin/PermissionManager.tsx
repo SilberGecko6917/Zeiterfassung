@@ -12,7 +12,6 @@ import { ShieldCheck, Save, AlertCircle, Lock } from "lucide-react";
 import { 
   availablePermissions, 
   defaultRolePermissions,
-  Permission
 } from "@/lib/settings";
 import { useSession } from "next-auth/react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -66,11 +65,6 @@ export function PermissionManager() {
     console.log("User role:", userRole);
     console.log("User role level:", userRoleLevel);
   }, [session, userRole, userRoleLevel]);
-
-  // Determine which roles the current user can edit
-  const editableRoles = roles.filter(role => 
-    roleHierarchy[role.id as keyof typeof roleHierarchy] < userRoleLevel
-  );
 
   // Fetch current permissions
   useEffect(() => {
@@ -263,13 +257,6 @@ export function PermissionManager() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Debug info - remove after fixing */}
-        <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">
-          <p>User Role: {userRole} (Level: {userRoleLevel})</p>
-          <p>Roles: {JSON.stringify(roles.map(r => r.id))}</p>
-          <p>Active Role: {activeRole}</p>
-        </div>
-        
         <Tabs 
           value={activeRole} 
           onValueChange={(value) => {
