@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
     const formattedEnd = format(end, "yyyy-MM-dd'T'23:59:59'Z'");
 
     // Build the where clause with conditional userId filter
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const whereClause: any = {
       startTime: {
         gte: formattedStart,

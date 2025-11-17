@@ -105,7 +105,7 @@ export async function middleware(request: NextRequest) {
     let hasRequiredPermission = false;
     
     for (const [route, permission] of Object.entries(apiPermissionMap)) {
-      if (pathname.includes(route.replace("/api/admin/", ""))) {
+      if (pathname.startsWith(route)) {
         try {
           const rolePermissions = await getRolePermissions();
           const userPermissions = rolePermissions[userRole] || [];

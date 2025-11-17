@@ -55,8 +55,8 @@ export function PermissionManager() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
-  // Get current user's role with fallback to ADMIN for safety
-  const userRole = session?.user?.role || "ADMIN"; // Fallback to ADMIN to ensure visibility
+  // Get current user's role with fallback to USER for safety
+  const userRole = session?.user?.role || "USER";
   const userRoleLevel = roleHierarchy[userRole as keyof typeof roleHierarchy] || roleHierarchy.ADMIN;
 
   // Log session info to help debug

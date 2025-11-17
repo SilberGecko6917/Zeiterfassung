@@ -34,8 +34,8 @@ async function updateTimeEntryHandler(
     const parsedStartTime = new Date(startTime);
     const parsedEndTime = new Date(endTime);
     
-    // Calculate duration if not provided (in milliseconds)
-    const calculatedDuration = providedDuration ?? (parsedEndTime.getTime() - parsedStartTime.getTime());
+    // Calculate duration if not provided (in seconds)
+    const calculatedDuration = providedDuration ?? (parsedEndTime.getTime() - parsedStartTime.getTime()) / 1000;
     const now = new Date();
 
     // Prevent entries in the future
