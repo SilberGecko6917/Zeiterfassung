@@ -31,6 +31,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
+    "dotenv": "^17.2.3",
     "exceljs": "^4.4.0",
     "framer-motion": "^12.10.5",
     "lucide-react": "^0.507.0",
