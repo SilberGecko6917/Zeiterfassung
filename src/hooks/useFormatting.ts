@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback } from "react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { useSetting } from "@/hooks/useSettings";

@@ -3,7 +3,6 @@ import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 import { RoleUtils } from "@/lib/role";
 import { getRolePermissions } from "@/lib/settings";
-const { getSetting } = await import("@/lib/settings");
 
 // Map dashboard routes to required permissions
 const routePermissionMap: Record<string, string> = {
@@ -145,6 +144,7 @@ export async function middleware(request: NextRequest) {
   // Root page redirect - check if landing page is disabled
   if (pathname === "/") {
     try {
+      const { getSetting } = await import("@/lib/settings");
       const disableLanding = await getSetting<boolean>("disable_landing_page");
       if (disableLanding) {
         return NextResponse.redirect(new URL("/login", request.url));
@@ -163,6 +163,7 @@ export async function middleware(request: NextRequest) {
 
     if (token) {
       try {
+        const { getSetting } = await import("@/lib/settings");
         const autoRedirect = await getSetting<boolean>("auto_redirect_from_login");
         if (autoRedirect) {
           return NextResponse.redirect(new URL("/dashboard", request.url));
