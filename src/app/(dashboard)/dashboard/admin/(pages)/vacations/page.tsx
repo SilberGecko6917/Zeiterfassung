@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useFormatting } from "@/hooks/useFormatting";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, Check, X, Filter, UserPlus } from "lucide-react";
-import { format, differenceInDays, addDays } from "date-fns";
+import { Calendar, Clock, Check, X, UserPlus } from "lucide-react";
+import { format, addDays } from "date-fns";
 import { de } from "date-fns/locale";
 import { toast } from "sonner";
 import {
@@ -78,6 +78,7 @@ export default function VacationsPage() {
       console.log("API Response:", data); // Debug logging
 
       // Transform the data to match expected format
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const transformedVacations = data.vacations.map((vacation: any) => ({
         id: vacation.id.toString(),
         userId: vacation.userId,

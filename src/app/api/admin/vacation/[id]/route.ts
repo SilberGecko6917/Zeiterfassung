@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { checkIsAdmin } from "@/lib/server/auth-actions";
+import { checkPermission } from "@/lib/server/auth-actions";
 import { LogAction, LogEntity } from "@/lib/enums";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { IP } from "@/lib/server/auth-actions";
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const isAdmin = await checkIsAdmin();
+    // Managers and admins can approve vacations with manage_all_vacation permission
+    const canApprove = await checkPermission("manage_all_vacation");
     const session = await getServerSession(authOptions);
     
-    if (!isAdmin || !session?.user?.id) {
+    if (!canApprove || !session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
     
@@ -81,7 +83,7 @@ export async function PUT(
           oldStatus: existingVacation.status,
           newStatus: status,
         }),
-        ipAddress: request.headers.get("x-forwarded-for") || undefined,
+        ipAddress: await IP(),
       },
     });
     

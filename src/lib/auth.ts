@@ -49,30 +49,36 @@ export const authOptions: NextAuthOptions = {
     updateAge: 24 * 60 * 60,
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
+      
+      // On initial sign-in, fetch role from database
       if (user) {
         token.id = user.id;
+        
+        // Fetch role from database and store in token
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { role: true },
+        });
+        token.role = dbUser?.role || "USER";
       }
+      
+      // Handle token refresh/update scenarios
+      if (trigger === "update" && token.sub) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.sub },
+          select: { role: true },
+        });
+        token.role = dbUser?.role || "USER";
+      }
+      
       return token;
     },
-    async session({ session, token, user }) {
-      // Add user ID to session
+    async session({ session, token }) {
+      // Add user data from token to session
       if (session.user) {
-        session.user.id = token.sub || user?.id;
-
-        // Fetch user role from database
-        try {
-          const dbUser = await prisma.user.findUnique({
-            where: { id: session.user.id },
-            select: { role: true },
-          });
-
-          // Add role to session
-          session.user.role = dbUser?.role || "USER";
-        } catch (error) {
-          console.error("Error fetching user role:", error);
-          session.user.role = "USER"; // Fallback to USER role
-        }
+        session.user.id = token.sub!;
+        session.user.role = token.role as string;
       }
       return session;
     },

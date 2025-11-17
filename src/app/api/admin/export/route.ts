@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { formatDate, formatTime } from "@/lib/format-utils";
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
-import { checkIsAdmin } from "@/lib/server/auth-actions";
+import { checkIsAdmin, checkPermission } from "@/lib/server/auth-actions";
 import { format, subDays, subMonths, subYears } from "date-fns";
 
 interface UserSummary {
@@ -15,9 +15,11 @@ interface UserSummary {
 
 export async function GET(request: NextRequest) {
   try {
-    // Check if user is admin
+    // Check if user has permission - admin or manager with export_reports permission
     const isAdmin = await checkIsAdmin();
-    if (!isAdmin) {
+    const hasExportPermission = await checkPermission("export_reports");
+    
+    if (!isAdmin && !hasExportPermission) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 

@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Settings as RefreshCw, Building, FileText, Globe, Clock, ShieldUser } from "lucide-react";
+import { Settings as RefreshCw, Building, FileText, Globe, Clock, ShieldUser, Save } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SettingDefinition } from "@/lib/settings";
 import { PermissionManager } from "@/components/admin/PermissionManager";
@@ -20,9 +20,11 @@ interface Setting extends SettingDefinition {
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Setting[]>([]);
+  const [originalSettings, setOriginalSettings] = useState<Setting[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("general");
+  const [hasChanges, setHasChanges] = useState(false);
 
   // Fetch settings
   const fetchSettings = async () => {
@@ -31,6 +33,8 @@ export default function SettingsPage() {
       const response = await fetch("/api/admin/settings");
       const data = await response.json();
       setSettings(data.settings || []);
+      setOriginalSettings(JSON.parse(JSON.stringify(data.settings || [])));
+      setHasChanges(false);
     } catch (error) {
       console.error("Failed to fetch settings:", error);
       toast.error("Fehler beim Laden der Einstellungen");
@@ -39,30 +43,41 @@ export default function SettingsPage() {
     }
   };
 
-  // Save a setting
-  const saveSetting = async (key: string, value: string | number | boolean) => {
+  // Save all changes
+  const saveAllSettings = async () => {
     try {
       setIsSaving(true);
-      const response = await fetch("/api/admin/settings", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ key, value }),
+      
+      // Get changed settings
+      const changedSettings = settings.filter((setting, index) => {
+        return JSON.stringify(setting.value) !== JSON.stringify(originalSettings[index]?.value);
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to save setting");
+      if (changedSettings.length === 0) {
+        toast.info("No changes to save");
+        return;
+      }
+
+      // Save each changed setting
+      for (const setting of changedSettings) {
+        const response = await fetch("/api/admin/settings", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ key: setting.key, value: setting.value }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to save ${setting.key}`);
+        }
       }
 
       toast.success("Einstellung gespeichert");
-      
-      // Update local state
-      setSettings(settings.map(setting => 
-        setting.key === key ? { ...setting, value } : setting
-      ));
+      setOriginalSettings(JSON.parse(JSON.stringify(settings)));
+      setHasChanges(false);
     } catch (error) {
-      console.error("Failed to save setting:", error);
+      console.error("Failed to save settings:", error);
       toast.error("Fehler beim Speichern der Einstellung");
     } finally {
       setIsSaving(false);
@@ -71,7 +86,10 @@ export default function SettingsPage() {
 
   // Handle setting changes
   const handleSettingChange = (key: string, value: string | number | boolean) => {
-    saveSetting(key, value);
+    setSettings(settings.map(setting => 
+      setting.key === key ? { ...setting, value } : setting
+    ));
+    setHasChanges(true);
   };
 
   // Render the appropriate input for a setting
@@ -178,7 +196,7 @@ export default function SettingsPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="animate-spin w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full" />
-          <p className="text-muted-foreground">Lade Einstellungen...</p>
+          <p className="text-muted-foreground">Einstellungen werden geladen...</p>
         </div>
       </div>
     );
@@ -197,13 +215,25 @@ export default function SettingsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Einstellungen</h1>
           <p className="text-muted-foreground mt-2">
-            Konfigurieren Sie die Anwendung nach Ihren Wünschen
+            Einstellungen verwalten und anpassen
           </p>
         </div>
-        <Button onClick={fetchSettings} variant="outline" size="sm">
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Aktualisieren
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={fetchSettings} variant="outline" size="sm">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Aktualisieren
+          </Button>
+          <Button 
+            onClick={saveAllSettings} 
+            variant="default" 
+            size="sm"
+            disabled={!hasChanges || isSaving}
+          >
+            <Save className="mr-2 h-4 w-4" />
+            Speichern
+            {hasChanges && !isSaving && " *"}
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">

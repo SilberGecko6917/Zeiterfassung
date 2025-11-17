@@ -5,9 +5,10 @@ import { LogAction, LogEntity } from "@/lib/enums";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-export async function PUT(
+// Shared update logic
+async function updateTimeEntryHandler(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  params: { id: string }
 ) {
   try {
     const isAdmin = await checkIsAdmin();
@@ -16,15 +17,15 @@ export async function PUT(
     if (!isAdmin || !session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
-    const { id } = await params;
+    const { id } = params;
     const entryId = parseInt(id);
     const body = await request.json();
-    const { startTime, endTime, duration } = body;
+    const { startTime, endTime, duration: providedDuration } = body;
 
     // Validate input
-    if (!startTime || !endTime || duration === undefined) {
+    if (!startTime || !endTime) {
       return NextResponse.json(
-        { error: "Start time, end time, and duration are required" },
+        { error: "Start time and end time are required" },
         { status: 400 }
       );
     }
@@ -32,6 +33,9 @@ export async function PUT(
     // Parse date strings to Date objects
     const parsedStartTime = new Date(startTime);
     const parsedEndTime = new Date(endTime);
+    
+    // Calculate duration if not provided (in milliseconds)
+    const calculatedDuration = providedDuration ?? (parsedEndTime.getTime() - parsedStartTime.getTime());
     const now = new Date();
 
     // Prevent entries in the future
@@ -72,7 +76,7 @@ export async function PUT(
       data: {
         startTime: parsedStartTime,
         endTime: parsedEndTime,
-        duration,
+        duration: calculatedDuration,
       },
     });
 
@@ -112,6 +116,22 @@ export async function PUT(
       { status: 500 }
     );
   }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const resolvedParams = await params;
+  return updateTimeEntryHandler(request, resolvedParams);
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const resolvedParams = await params;
+  return updateTimeEntryHandler(request, resolvedParams);
 }
 
 export async function DELETE(

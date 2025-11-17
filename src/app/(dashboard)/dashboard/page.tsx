@@ -16,7 +16,6 @@ import {
   Clock,
   Calendar as CalendarIcon,
   Edit,
-  X,
   Check,
   Trash,
   Plus,
@@ -33,7 +32,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { DateTimePicker24h } from "@/components/ui/datetime-picker";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -80,11 +78,6 @@ export default function Dashboard() {
   // State for the edit dialog
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
-  const [editStartDate, setEditStartDate] = useState<Date | undefined>(
-    undefined
-  );
-  const [editEndDate, setEditEndDate] = useState<Date | undefined>(undefined);
-  const [originalEntryDate, setOriginalEntryDate] = useState<Date | null>(null);
 
   // State for creating time entries
   const [createEntryDialogOpen, setCreateEntryDialogOpen] = useState(false);
@@ -269,6 +262,7 @@ export default function Dashboard() {
   // Open edit dialog for a time entry
   const handleEditEntry = (entry: TimeEntry) => {
     const startDate = new Date(entry.startTime);
+    const endDate = new Date(entry.endTime);
 
     // Check if the entry is within the last 7 days
     if (!isWithinLastSevenDays(startDate)) {
@@ -280,10 +274,13 @@ export default function Dashboard() {
 
     setEditingEntry(entry);
 
-    // Store the original date to check if it changed later
-    setOriginalEntryDate(startDate);
-    setEditStartDate(startDate);
-    setEditEndDate(new Date(entry.endTime));
+    setNewEntryForm({
+      startDate: format(startDate, "yyyy-MM-dd"),
+      startTime: format(startDate, "HH:mm"),
+      endDate: format(endDate, "yyyy-MM-dd"),
+      endTime: format(endDate, "HH:mm"),
+    });
+    
     setEditDialogOpen(true);
   };
 
@@ -292,31 +289,30 @@ export default function Dashboard() {
     try {
       setIsLoading(true);
 
-      // Check if the entry is within the last 7 days
+      // Validate form
+      if (!newEntryForm.startDate || !newEntryForm.startTime || !newEntryForm.endDate || !newEntryForm.endTime) {
+        throw new Error("Alle Felder müssen ausgefüllt sein");
+      }
+
+      // Create datetime objects
+      const startDateTime = new Date(`${newEntryForm.startDate}T${newEntryForm.startTime}:00`);
+      const endDateTime = new Date(`${newEntryForm.endDate}T${newEntryForm.endTime}:00`);
+
+      // Validate date is within last 7 days
       const now = new Date();
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(now.getDate() - 7);
 
-      if (!editStartDate) {
-        throw new Error("Startdatum ist nicht definiert");
-      }
-
-      const newStartDate = new Date(editStartDate);
-
-      if (newStartDate < sevenDaysAgo) {
+      if (startDateTime < sevenDaysAgo) {
         throw new Error(
           "Zeiteinträge können nur innerhalb der letzten 7 Tage gesetzt werden"
         );
       }
 
-      // Create full datetime strings
-      const startISOString = editStartDate.toISOString();
-
-      if (!editEndDate) {
-        throw new Error("Enddatum ist nicht definiert");
+      // Validate end is after start
+      if (endDateTime <= startDateTime) {
+        throw new Error("Endzeit muss nach der Startzeit liegen");
       }
-
-      const endISOString = editEndDate.toISOString();
 
       const response = await fetch(`/api/time/update/${editingEntry?.id}`, {
         method: "PUT",
@@ -324,60 +320,39 @@ export default function Dashboard() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          startTime: startISOString,
-          endTime: endISOString,
+          startTime: startDateTime.toISOString(),
+          endTime: endDateTime.toISOString(),
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to update time entry");
+        const error = await response.json();
+        throw new Error(error.error || "Fehler beim Aktualisieren");
       }
 
-      // Check if the date has changed
-      const startDateDay = editStartDate.toISOString().split("T")[0];
-      const originalDateDay = originalEntryDate?.toISOString().split("T")[0];
-      const currentViewDay = date.toISOString().split("T")[0];
-
-      // Reload entries for the current view date
-      const entriesResponse = await fetch(
-        `/api/time/entries?date=${format(date, "yyyy-MM-dd")}`
-      );
-      const entriesData = await entriesResponse.json();
-      setTodaysEntries(entriesData.entries || []);
-
-      // If date changed, show a notification
-      if (startDateDay !== originalDateDay) {
-        toast.info(
-          `Der Zeiteintrag wurde auf ${format(editStartDate, "dd.MM.yyyy", {
-            locale: de,
-          })} verschoben`
-        );
-
-        // If the entry was moved away from the current view date
-        if (startDateDay !== currentViewDay) {
-          // Suggest to view the new date
-          toast.info(
-            <div className="flex flex-col">
-              <span>Möchten Sie zum neuen Datum wechseln?</span>
-              <Button
-                className="mt-2"
-                size="sm"
-                onClick={() => setDate(new Date(editStartDate))}
-              >
-                Zum {format(editStartDate, "dd.MM.yyyy", { locale: de })}{" "}
-                wechseln
-              </Button>
-            </div>,
-            { duration: 5000 }
-          );
-        }
-      }
-
+      toast.success("Zeiteintrag erfolgreich aktualisiert");
       setEditDialogOpen(false);
-      toast.success("Zeiteintrag aktualisiert");
+      
+      // Reset form
+      setNewEntryForm({
+        startDate: "",
+        startTime: "",
+        endDate: "",
+        endTime: "",
+      });
+
+      // Reload entries for the current date
+      try {
+        const formattedDate = format(date, "yyyy-MM-dd");
+        const response = await fetch(`/api/time/entries?date=${formattedDate}`);
+        const data = await response.json();
+        setTodaysEntries(data.entries || []);
+      } catch {
+        toast.error("Fehler beim Laden der Zeiteinträge");
+      }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      toast.error(error.message || "Fehler beim Speichern des Zeiteintrags");
+      toast.error(error.message || "Fehler beim Aktualisieren");
     } finally {
       setIsLoading(false);
     }
@@ -435,6 +410,7 @@ export default function Dashboard() {
       setTodaysEntries(entriesData.entries || []);
 
       toast.success("Zeiteintrag erstellt");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       toast.error(error.message || "Fehler beim Erstellen des Zeiteintrags");
     } finally {
@@ -484,6 +460,7 @@ export default function Dashboard() {
       setTodaysEntries(entriesData.entries || []);
 
       toast.success("Zeiteintrag gelöscht");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       toast.error(error.message || "Fehler beim Löschen des Zeiteintrags");
     } finally {
@@ -528,6 +505,7 @@ export default function Dashboard() {
       });
 
       toast.success("Urlaubsantrag erfolgreich eingereicht");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       toast.error(error.message || "Fehler beim Beantragen des Urlaubs");
     } finally {
@@ -629,63 +607,35 @@ export default function Dashboard() {
                   selected={date}
                   onSelect={(newDate) => newDate && setDate(newDate)}
                   className="border rounded-md p-3"
-                  locale={de}
-                  components={{
-                    DayContent: (props) => {
-                      // Check if the date is a vacation day
-                      const isVacationDay = vacations
+                  modifiers={{
+                    vacation: (day) => {
+                      return vacations
                         .filter(v => v.status === "approved")
                         .some(v => {
                           try {
-                            // Vacation start and end dates
                             const start = new Date(v.startDate);
                             start.setHours(0, 0, 0, 0);
-                            
                             const end = new Date(v.endDate);
                             end.setHours(23, 59, 59, 999);
-                            
-                            // Current date
-                            const currentDate = new Date(props.date);
+                            const currentDate = new Date(day);
                             currentDate.setHours(0, 0, 0, 0);
-                            
-                            // Check if the current date is a weekday (Monday to Friday)
-                            const day = currentDate.getDay();
-                            const isWeekday = day > 0 && day < 6;
-                            
-                            // Check if the current date is within the vacation range
-                            return isWeekday && 
-                              currentDate >= start && 
-                              currentDate <= end;
+                            const dayOfWeek = currentDate.getDay();
+                            const isWeekday = dayOfWeek > 0 && dayOfWeek < 6;
+                            return isWeekday && currentDate >= start && currentDate <= end;
                           } catch (error) {
                             console.error("Fehler beim Vergleich von Urlaubsdaten:", error);
                             return false;
                           }
                         });
-                      
-                      // Check if there are any time entries for today
-                      const dateStr = format(props.date, "yyyy-MM-dd");
-                      const hasEntries = todaysEntries.some(entry => 
-                        entry.startTime.startsWith(dateStr)
-                      );
-                      
-                      return (
-                        <div className="relative flex items-center justify-center h-9 w-9">
-                          <div className={`flex items-center justify-center rounded-full h-8 w-8 ${
-                            isVacationDay 
-                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 font-medium" 
-                              : ""
-                          }`}>
-                            {props.date.getDate()}
-                          </div>
-                          {hasEntries && !isVacationDay && (
-                            <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-primary rounded-full"></div>
-                          )}
-                          {isVacationDay && (
-                            <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-4 h-1 bg-green-500 rounded-full"></div>
-                          )}
-                        </div>
-                      );
+                    },
+                    hasEntries: (day) => {
+                      const dateStr = format(day, "yyyy-MM-dd");
+                      return todaysEntries.some(entry => entry.startTime.startsWith(dateStr));
                     }
+                  }}
+                  modifiersClassNames={{
+                    vacation: "bg-green-100 dark:bg-green-900/30 rounded-xl",
+                    hasEntries: "font80 rounded-xl old"
                   }}
                 />
               </div>
@@ -869,9 +819,28 @@ export default function Dashboard() {
                     Urlaubstage
                   </div>
                 </div>
-                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg text-center">
+                <div
+                  className={`p-4 rounded-lg text-center 
+                    ${vacationStats.remainingDays > 10
+                      ? 'bg-green-50 dark:bg-green-900/20'
+                      : vacationStats.remainingDays > 5
+                      ? 'bg-amber-50 dark:bg-amber-900/20'
+                      : vacationStats.remainingDays >= 0
+                      ? 'bg-red-100 dark:bg-red-900/30'
+                      : 'bg-red-200 dark:bg-red-950'}
+                  `}
+                >
                   <div className="text-muted-foreground mb-1">Verbleibend</div>
-                  <div className="text-3xl font-bold text-green-600 dark:text-green-400">
+                  <div
+                    className={`text-3xl font-bold 
+                      ${vacationStats.remainingDays > 10
+                        ? 'text-green-600 dark:text-green-400'
+                        : vacationStats.remainingDays > 5
+                        ? 'text-amber-600 dark:text-amber-400'
+                        : vacationStats.remainingDays >= 0
+                        ? 'text-red-600 dark:text-red-400'
+                        : 'text-red-800 dark:text-red-300'}`}
+                  >
                     {vacationStats.remainingDays}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
@@ -895,10 +864,11 @@ export default function Dashboard() {
                   <div
                     className="bg-primary h-2.5 rounded-full"
                     style={{
-                      width: `${
+                      width: `${Math.min(
                         (vacationStats.takenDays / vacationStats.totalDays) *
+                        100,
                         100
-                      }%`,
+                      )}%`,
                     }}
                   ></div>
                 </div>
@@ -1015,45 +985,131 @@ export default function Dashboard() {
 
       {/* Edit Entry Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Zeiteintrag bearbeiten</DialogTitle>
+            <DialogTitle className="text-xl">Zeiteintrag bearbeiten</DialogTitle>
           </DialogHeader>
           <div className="grid gap-6 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label className="text-right font-medium">Startzeit</label>
-              <div className="col-span-3">
-                <DateTimePicker24h
-                  value={editStartDate}
-                  onChange={setEditStartDate}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-startDate">Startdatum</Label>
+                <Input
+                  id="edit-startDate"
+                  type="date"
+                  value={newEntryForm.startDate}
+                  onChange={(e) =>
+                    setNewEntryForm({
+                      ...newEntryForm,
+                      startDate: e.target.value,
+                    })
+                  }
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-startTime">Startzeit</Label>
+                <Input
+                  id="edit-startTime"
+                  type="time"
+                  value={newEntryForm.startTime}
+                  onChange={(e) =>
+                    setNewEntryForm({
+                      ...newEntryForm,
+                      startTime: e.target.value,
+                    })
+                  }
+                  className="w-full"
                 />
               </div>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label className="text-right font-medium">Endzeit</label>
-              <div className="col-span-3">
-                <DateTimePicker24h
-                  value={editEndDate}
-                  onChange={setEditEndDate}
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-endDate">Enddatum</Label>
+                <Input
+                  id="edit-endDate"
+                  type="date"
+                  value={newEntryForm.endDate}
+                  onChange={(e) =>
+                    setNewEntryForm({
+                      ...newEntryForm,
+                      endDate: e.target.value,
+                    })
+                  }
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-endTime">Endzeit</Label>
+                <Input
+                  id="edit-endTime"
+                  type="time"
+                  value={newEntryForm.endTime}
+                  onChange={(e) =>
+                    setNewEntryForm({
+                      ...newEntryForm,
+                      endTime: e.target.value,
+                    })
+                  }
+                  className="w-full"
                 />
               </div>
             </div>
+
+            {/* Calculate and show duration */}
+            {newEntryForm.startDate &&
+              newEntryForm.startTime &&
+              newEntryForm.endDate &&
+              newEntryForm.endTime &&
+              (() => {
+                try {
+                  const start = new Date(
+                    `${newEntryForm.startDate}T${newEntryForm.startTime}:00`
+                  );
+                  const end = new Date(
+                    `${newEntryForm.endDate}T${newEntryForm.endTime}:00`
+                  );
+                  const duration = Math.floor(
+                    (end.getTime() - start.getTime()) / 1000
+                  );
+
+                  return (
+                    <div className="bg-muted rounded-md p-4">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium">Berechnete Dauer:</span>
+                        <span
+                          className={`font-mono ${
+                            duration < 0
+                              ? "text-destructive"
+                              : "text-green-600 dark:text-green-400"
+                          }`}
+                        >
+                          {duration < 0 ? "Ungültig" : formatTime(duration)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                } catch {
+                  return null;
+                }
+              })()}
           </div>
-          <DialogFooter>
+          <DialogFooter className="sm:justify-between">
             <Button
               variant="outline"
               onClick={() => setEditDialogOpen(false)}
               disabled={isLoading}
+              className="hidden sm:flex"
             >
-              <X className="mr-2 h-4 w-4" />
               Abbrechen
             </Button>
             <Button
               onClick={handleSaveEdit}
-              disabled={isLoading || !editStartDate || !editEndDate}
+              disabled={isLoading}
+              className="w-full sm:w-auto"
             >
               {isLoading ? (
-                <div className="flex items-center">
+                <div className="flex items-center justify-center">
                   <div className="animate-spin mr-2 h-4 w-4 border-2 border-b-transparent rounded-full" />
                   <span>Speichern...</span>
                 </div>

@@ -8,7 +8,6 @@ import { Search, UserPlus, Pencil, Trash2, Clock } from "lucide-react";
 import { UserDialog } from "@/components/admin/UserDialog";
 import { DeleteUserDialog } from "@/components/admin/DeleteUserDialog";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
-import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
 import { User } from "@prisma/client"; // Import Prisma's User type
 

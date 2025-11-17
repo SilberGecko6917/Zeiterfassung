@@ -34,7 +34,6 @@ export default function ActivitiesPage() {
     filteredUserId,
     filteredUserName,
     fetchTimeEntries,
-    deleteTimeEntry,
     filterByUser,
     clearFilter,
   } = useAdminActivities();
@@ -86,7 +85,7 @@ export default function ActivitiesPage() {
         fetchTimeEntries();
       }
     }
-  }, [searchParams]); // Reduced dependency array
+  }, [fetchTimeEntries, fetchUsers, filterByUser, searchParams]);
 
   // Handle creating a new time entry
   const handleCreateTimeEntry = () => {
@@ -103,18 +102,6 @@ export default function ActivitiesPage() {
   const handleDeleteTimeEntryPrompt = (entry: TimeEntryWithUser) => {
     setTimeEntryToDelete(entry);
     setDeleteTimeEntryDialogOpen(true);
-  };
-
-  // Delete time entry
-  const handleDeleteTimeEntry = async () => {
-    if (!timeEntryToDelete) return;
-
-    try {
-      await deleteTimeEntry(timeEntryToDelete.id.toString());
-      setDeleteTimeEntryDialogOpen(false);
-    } catch (error) {
-      console.error("Failed to delete time entry:", error);
-    }
   };
 
   // Handle clearing the filter

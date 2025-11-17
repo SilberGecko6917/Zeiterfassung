@@ -6,10 +6,10 @@ import { LogAction, LogEntity } from "@/lib/enums";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-// Update a user
-export async function PUT(
+// Shared update logic
+async function updateUserHandler(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  params: { id: string }
 ) {
   try {
     const isAdmin = await checkIsAdmin();
@@ -18,7 +18,7 @@ export async function PUT(
     if (!isAdmin || !session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
-    const userId = (await params).id;
+    const userId = params.id;
     const body = await request.json();
     const { name, email, password, role } = body;
 
@@ -53,7 +53,7 @@ export async function PUT(
     };
 
     // Only update password if provided
-    if (password) {
+    if (password && password.trim() !== "") {
       updateData.password = await bcrypt.hash(password, 10);
     }
 
@@ -97,6 +97,24 @@ export async function PUT(
       { status: 500 }
     );
   }
+}
+
+// Update a user (PATCH method)
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const resolvedParams = await params;
+  return updateUserHandler(request, resolvedParams);
+}
+
+// Update a user (PUT method for backward compatibility) (PUT method for backward compatibility)
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const resolvedParams = await params;
+  return updateUserHandler(request, resolvedParams);
 }
 
 // Delete a user

@@ -12,6 +12,7 @@ export interface SettingDefinition {
   defaultValue: string | number | boolean;
   category: SettingCategory;
   options?: Array<{ value: string; label: string }>; // For select type
+  wip?: boolean;
 }
 
 // Define permission types for better type safety
@@ -53,13 +54,26 @@ export const availablePermissions: Permission[] = [
 export const defaultRolePermissions = {
   ADMIN: availablePermissions.map(p => p.id), // All permissions
   MANAGER: [
-    "view_own_time", "edit_own_time", 
-    "view_users", 
+    // Time tracking
+    "view_own_time", 
+    "edit_own_time", 
+    "view_all_time",
+    
+    // Users
+    "view_users",
+    
+    // Vacation
     "request_vacation",
-    "view_own_reports", "export_reports"
+    "manage_all_vacation",
+    
+    // Reports
+    "view_own_reports", 
+    "view_all_reports",
+    "export_reports"
   ],
   USER: [
-    "view_own_time", "edit_own_time",
+    "view_own_time", 
+    "edit_own_time",
     "request_vacation",
     "view_own_reports"
   ]
@@ -75,6 +89,7 @@ export const settingsDefinitions: SettingDefinition[] = [
     description: "Name der Firma, wird im Titel und Footer angezeigt.",
     defaultValue: "Meine Firma GmbH",
     category: "general",
+    wip: true,
   },
   {
     key: "contact_email",
@@ -83,6 +98,7 @@ export const settingsDefinitions: SettingDefinition[] = [
     description: "E-Mail-Adresse für Anfragen und Support.",
     defaultValue: "info@meinefirma.de",
     category: "general",
+    wip: true,
   },
   {
     key: "contact_phone",
@@ -91,6 +107,7 @@ export const settingsDefinitions: SettingDefinition[] = [
     description: "Telefonnummer für Anfragen und Support.",
     defaultValue: "+49 123 456789",
     category: "general",
+    wip: true,
   },
 
   // Legal Settings
@@ -101,6 +118,7 @@ export const settingsDefinitions: SettingDefinition[] = [
     description: "Url zum Impressum der Firma.",
     defaultValue: "https://impressum.meinefirma.de",
     category: "legal",
+    wip: true,
   },
   {
     key: "datenschutz",
@@ -109,6 +127,7 @@ export const settingsDefinitions: SettingDefinition[] = [
     description: "Url zur Datenschutzerklärung der Firma.",
     defaultValue: "https://datenschutz.meinefirma.de",
     category: "legal",
+    wip: true,
   },
 
   // System Settings
@@ -133,19 +152,7 @@ export const settingsDefinitions: SettingDefinition[] = [
       { value: "24h", label: "24 Stunden (HH:MM)" },
       { value: "12h", label: "12 Stunden (hh:MM AM/PM)" },
     ],
-  },
-  {
-    key: "date_format",
-    type: "select",
-    label: "Datumsformat",
-    description: "Format für die Anzeige von Datumsangaben.",
-    defaultValue: "dd.MM.yyyy",
-    category: "localization",
-    options: [
-      { value: "dd.MM.yyyy", label: "TT.MM.JJJJ" },
-      { value: "MM/dd/yyyy", label: "MM/TT/JJJJ" },
-      { value: "yyyy-MM-dd", label: "JJJJ-MM-TT" },
-    ],
+    wip: true,
   },
   {
     key: "default_language",
@@ -158,6 +165,7 @@ export const settingsDefinitions: SettingDefinition[] = [
       { value: "de", label: "Deutsch" },
       { value: "en", label: "Englisch" },
     ],
+    wip: true,
   },
   
   // Role permission settings
@@ -271,8 +279,8 @@ export async function hasPermission(userRole: string, permissionId: string): Pro
 // Debug version to help troubleshoot
 export async function debugRolePermissions(): Promise<{
   dbValue: string;
-  parsedValue: any;
-  defaultValue: any;
+  parsedValue: unknown;
+  defaultValue: unknown;
   finalValue: Record<string, string[]>;
 }> {
   try {
@@ -283,7 +291,7 @@ export async function debugRolePermissions(): Promise<{
     let parsedValue;
     try {
       parsedValue = JSON.parse(dbValue);
-    } catch (e) {
+    } catch {
       parsedValue = null;
     }
     
