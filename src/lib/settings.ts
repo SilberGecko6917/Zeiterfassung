@@ -139,6 +139,14 @@ export const settingsDefinitions: SettingDefinition[] = [
     defaultValue: false,
     category: "system",
   },
+  {
+    key: "auto_redirect_from_login",
+    type: "boolean",
+    label: "Automatische Weiterleitung nach Login",
+    description: "Wenn aktiviert, werden angemeldete Benutzer automatisch zum Dashboard weitergeleitet.",
+    defaultValue: true,
+    category: "system",
+  },
 
   // Localization Settings
   {

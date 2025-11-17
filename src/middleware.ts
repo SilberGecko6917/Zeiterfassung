@@ -3,6 +3,7 @@ import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 import { RoleUtils } from "@/lib/role";
 import { getRolePermissions } from "@/lib/settings";
+const { getSetting } = await import("@/lib/settings");
 
 // Map dashboard routes to required permissions
 const routePermissionMap: Record<string, string> = {
@@ -141,20 +142,34 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Root page redirect
-  if (pathname === "/" && process.env.NEXT_PUBLIC_REMOVE_LANDING === "True") {
-    return NextResponse.redirect(new URL("/login", request.url));
+  // Root page redirect - check if landing page is disabled
+  if (pathname === "/") {
+    try {
+      const disableLanding = await getSetting<boolean>("disable_landing_page");
+      if (disableLanding) {
+        return NextResponse.redirect(new URL("/login", request.url));
+      }
+    } catch (error) {
+      console.error("[Middleware] Error checking landing page setting:", error);
+    }
   }
 
-  // Login redirect
+  // Login redirect - check if auto redirect is enabled
   if (pathname === "/login") {
     const token = await getToken({
       req: request,
       secret: process.env.NEXTAUTH_SECRET,
     });
 
-    if (token && process.env.NEXT_PUBLIC_LOGIN_REDIRECT === "True") {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+    if (token) {
+      try {
+        const autoRedirect = await getSetting<boolean>("auto_redirect_from_login");
+        if (autoRedirect) {
+          return NextResponse.redirect(new URL("/dashboard", request.url));
+        }
+      } catch (error) {
+        console.error("[Middleware] Error checking auto redirect setting:", error);
+      }
     }
   }
 

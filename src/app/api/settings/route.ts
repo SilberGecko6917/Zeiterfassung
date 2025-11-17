@@ -8,6 +8,7 @@ const PUBLIC_SETTINGS = [
   "date_format",
   "default_language",
   "disable_landing_page",
+  "auto_redirect_from_login",
   "contact_email",
   "contact_phone",
   "impressum",
