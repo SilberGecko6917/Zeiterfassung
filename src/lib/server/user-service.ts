@@ -37,7 +37,7 @@ export async function getUserById(userId: string): Promise<UserData | null> {
       id: user?.id || "",
       name: user?.name || "",
       email: user?.email || "",
-      role: user?.role || "",
+      role: (user?.role || "USER") as "USER" | "MANAGER" | "ADMIN",
       createdAt: user?.createdAt.toDateString() || "",
     };
     return userData;
