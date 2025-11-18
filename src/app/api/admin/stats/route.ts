@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { checkIsAdmin } from "@/lib/server/auth-actions";
+import { checkIsAdmin, checkPermission } from "@/lib/server/auth-actions";
 import { startOfDay, endOfDay, startOfWeek, addDays } from "date-fns";
 
 export async function GET() {
   try {
+    // Check if user has permission - admin or manager with view_all_reports permission
     const isAdmin = await checkIsAdmin();
+    const hasReportPermission = await checkPermission("view_all_reports");
 
-    if (!isAdmin) {
+    if (!isAdmin && !hasReportPermission) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 

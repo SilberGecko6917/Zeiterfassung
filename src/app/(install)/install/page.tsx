@@ -96,6 +96,7 @@ export default function InstallPage() {
         if (!data.success) {
           toast.error("Datenbankverbindung konnte nicht hergestellt werden");
         }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         console.error(error);
         setInstallSteps((prev) => ({
@@ -149,6 +150,7 @@ export default function InstallPage() {
       setTimeout(() => {
         router.push("/login");
       }, 2000);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error(error);
       toast.error(error.message || "Fehler beim Erstellen des Admin-Kontos");

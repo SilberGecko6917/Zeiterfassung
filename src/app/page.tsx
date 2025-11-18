@@ -3,6 +3,7 @@
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useSetting } from "@/hooks/useSettings";
 import { PROJECT_NAME } from "@/lib/constants";
 import {
   Clock,
@@ -14,9 +15,33 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 
 export default function Home() {
+  const router = useRouter();
+  const { value: disableLandingPage, loading } = useSetting(
+    "disable_landing_page",
+    false
+  );
+  const { data: session } = useSession();
+
+  // Redirect if landing page is disabled
+  useEffect(() => {
+    if (!loading && disableLandingPage) {
+      router.push("/login");
+    }
+  }, [disableLandingPage, loading, router]);
+
+  if (loading || disableLandingPage) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full" />
+      </div>
+    );
+  }
+
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -33,8 +58,6 @@ export default function Home() {
     hidden: { y: 20, opacity: 0 },
     visible: { y: 0, opacity: 1 },
   };
-
-  const { data: session } = useSession();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">

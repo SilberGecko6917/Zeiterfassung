@@ -42,17 +42,9 @@ docker compose up -d
 ### Initial Configuration
 1. Navigate to `https://your-domain.com/install` in your browser
 2. Follow the setup wizard to create an admin account
-3. **Landing Page Configuration**
-   - To replace the default landing page with the login screen:
-   ```bash
-   # Add to .env.production
-   NEXT_PUBLIC_REMOVE_LANDING=True
-   ```
-   - To disable auto redirect from loginpage to dashboard:
-   ```bash
-   # Edit .env.production
-   NEXT_PUBLIC_LOGIN_REDIRECT=False
-   ```
+3. **System Settings** can be configured in the admin dashboard under Settings
+   - **Landing Page**: Enable/disable the landing page (redirects to login when disabled)
+   - **Auto Redirect**: Enable/disable automatic redirect from login to dashboard
 
 ## Updating
 ```run

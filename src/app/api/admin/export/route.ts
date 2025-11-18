@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatDate, formatTime } from "@/lib/format-utils";
+import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
-import { checkIsAdmin } from "@/lib/server/auth-actions";
+import { checkIsAdmin, checkPermission } from "@/lib/server/auth-actions";
 import { format, subDays, subMonths, subYears } from "date-fns";
-import * as ExcelJS from "exceljs";
 
 interface UserSummary {
   name: string;
@@ -14,9 +15,11 @@ interface UserSummary {
 
 export async function GET(request: NextRequest) {
   try {
-    // Check if user is admin
+    // Check if user has permission - admin or manager with export_reports permission
     const isAdmin = await checkIsAdmin();
-    if (!isAdmin) {
+    const hasExportPermission = await checkPermission("export_reports");
+    
+    if (!isAdmin && !hasExportPermission) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -80,9 +83,14 @@ export async function GET(request: NextRequest) {
     titleRow.font = { size: 16, bold: true };
     titleRow.alignment = { horizontal: 'center' };
     
+    // Format dates for header
+    const formattedStartDate = await formatDate(startDate);
+    const formattedEndDate = await formatDate(endDate);
+    const formattedCreationDate = await formatDate(new Date());
+    
     summarySheet.mergeCells('A2:G2');
     const periodRow = summarySheet.getCell('A2');
-    periodRow.value = `Zeitraum: ${format(startDate, "dd.MM.yyyy")} bis ${format(endDate, "dd.MM.yyyy")}`;
+    periodRow.value = `Zeitraum: ${formattedStartDate} bis ${formattedEndDate}`;
     periodRow.font = { size: 12, italic: true };
     periodRow.alignment = { horizontal: 'center' };
     
@@ -90,7 +98,7 @@ export async function GET(request: NextRequest) {
     summarySheet.getCell('A4').value = "Erstellt am:";
     summarySheet.getCell('A4').font = { bold: true };
     
-    summarySheet.getCell('C4').value = format(new Date(), "dd.MM.yyyy HH:mm");
+    summarySheet.getCell('C4').value = formattedCreationDate;
     
     const userSummary: Record<string, UserSummary> = {};
     timeEntries.forEach(entry => {
@@ -191,9 +199,10 @@ export async function GET(request: NextRequest) {
     });
 
     // Add data to worksheet
-    timeEntries.forEach((entry) => {
-      const startTime = new Date(entry.startTime);
-      const endTime = entry.endTime ? new Date(entry.endTime) : new Date();
+    for (const entry of timeEntries) {
+      const formattedDate = await formatDate(entry.startTime);
+      const formattedStartTime = await formatTime(entry.startTime);
+      const formattedEndTime = entry.endTime ? await formatTime(entry.endTime) : "Läuft";
 
       // Calculate duration in hours
       const durationHours = Number(entry.duration) / 3600;
@@ -215,19 +224,19 @@ export async function GET(request: NextRequest) {
       
       const breakDurationHours = totalBreakDuration / 3600;
       const netDurationHours = durationHours - breakDurationHours;
-
+      
       worksheet.addRow({
         user: entry.user?.name || "Unbekannt",
         email: entry.user?.email || "",
-        date: format(startTime, "dd.MM.yyyy"),
-        start: format(startTime, "HH:mm"),
-        end: entry.endTime ? format(endTime, "HH:mm") : "Läuft",
+        date: formattedDate,
+        start: formattedStartTime,
+        end: formattedEndTime,
         duration: durationHours.toFixed(2),
         breakDuration: breakDurationHours.toFixed(2),
         netDuration: netDurationHours.toFixed(2),
         details: breakDetails || "Keine Pausen"
       });
-    });
+    }
 
     // Auto-filter for the header row
     worksheet.autoFilter = {

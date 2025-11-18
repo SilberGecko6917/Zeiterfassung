@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { checkIsAdmin, IP } from "@/lib/server/auth-actions";
+import { checkIsAdmin, checkPermission, IP } from "@/lib/server/auth-actions";
 import { format, parseISO, subDays } from "date-fns";
 import { LogAction, LogEntity } from "@/lib/enums";
 
 export async function GET(request: NextRequest) {
   try {
+    // Check if user has permission - admin or manager with view_all_time permission
     const isAdmin = await checkIsAdmin();
+    const hasViewPermission = await checkPermission("view_all_time");
 
-    if (!isAdmin) {
+    if (!isAdmin && !hasViewPermission) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -27,6 +29,7 @@ export async function GET(request: NextRequest) {
     const formattedEnd = format(end, "yyyy-MM-dd'T'23:59:59'Z'");
 
     // Build the where clause with conditional userId filter
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const whereClause: any = {
       startTime: {
         gte: formattedStart,

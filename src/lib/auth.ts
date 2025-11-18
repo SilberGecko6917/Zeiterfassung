@@ -1,9 +1,11 @@
-import { NextAuthOptions } from "next-auth";
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import { prisma } from "@/lib/prisma";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcrypt";
-import { prisma } from "@/lib/prisma";
+import { NextAuthOptions } from "next-auth";
 
 export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -47,15 +49,36 @@ export const authOptions: NextAuthOptions = {
     updateAge: 24 * 60 * 60,
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
+      
+      // On initial sign-in, fetch role from database
       if (user) {
         token.id = user.id;
+        
+        // Fetch role from database and store in token
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { role: true },
+        });
+        token.role = dbUser?.role || "USER";
       }
+      
+      // Handle token refresh/update scenarios
+      if (trigger === "update" && token.sub) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.sub },
+          select: { role: true },
+        });
+        token.role = dbUser?.role || "USER";
+      }
+      
       return token;
     },
     async session({ session, token }) {
+      // Add user data from token to session
       if (session.user) {
-        session.user.id = token.id as string;
+        session.user.id = token.sub!;
+        session.user.role = token.role as string;
       }
       return session;
     },

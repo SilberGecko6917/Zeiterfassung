@@ -63,12 +63,18 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
+        console.error("[LOGIN] Error:", result.error);
         toast.error("Ungültige E-Mail oder Passwort");
-      } else {
+      } else if (result?.ok) {
+        toast.success("Erfolgreich angemeldet!");
         router.push("/dashboard");
+        router.refresh();
+      } else {
+        toast.error("Ein unerwarteter Fehler ist aufgetreten");
       }
     } catch (error) {
-      console.error(error);
+      console.error("[LOGIN] Exception:", error);
+      toast.error("Ein Fehler ist aufgetreten");
     } finally {
       setIsLoading(false);
     }

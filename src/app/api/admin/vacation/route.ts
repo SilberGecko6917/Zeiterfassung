@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { checkIsAdmin } from "@/lib/server/auth-actions";
+import { checkIsAdmin, checkPermission } from "@/lib/server/auth-actions";
 
 export async function GET(request: NextRequest) {
   try {
+    // Check if user has permission - admin or manager with manage_all_vacation permission
     const isAdmin = await checkIsAdmin();
+    const hasVacationPermission = await checkPermission("manage_all_vacation");
     
-    if (!isAdmin) {
+    if (!isAdmin && !hasVacationPermission) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -14,6 +16,7 @@ export async function GET(request: NextRequest) {
     const status = url.searchParams.get("status");
     const userId = url.searchParams.get("userId");
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const filter: any = {};
     if (status) {
       filter.status = status;

@@ -171,4 +171,9 @@ export enum LogEntity {
    * Vacation entity
    */
   VACATION = "VACATION",
+
+  /**
+   * Setting entity
+   */
+  SETTING = "SETTING",
 }

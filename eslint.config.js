@@ -7,7 +7,7 @@ const compat = new FlatCompat({
 
 module.exports = [
   ...compat.config({
-    extends: ["next/core-web-vitals", "next/typescript", "next", "prisma"],
+    extends: ["next/core-web-vitals", "next/typescript", "next"],
     rules: {
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": [
