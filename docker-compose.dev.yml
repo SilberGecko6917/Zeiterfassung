@@ -10,7 +10,6 @@ services:
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - NEXTAUTH_URL=${NEXTAUTH_URL}
       - CRONEJOB_KEY=${CRONEJOB_KEY}
-      - DATABASE_URL=${DATABASE_URL}
       - NEXT_PUBLIC_LOGIN_REDIRECT=True
       - NODE_ENV=development
     volumes:
