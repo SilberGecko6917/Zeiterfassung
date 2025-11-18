@@ -15,29 +15,30 @@ A modern time tracking system built with Next.js.
 - Administrator dashboard with detailed analytics
 - Responsive design for desktop and mobile use
 
-## Installation
+## Quick Start (Recommended)
 
 ### Prerequisites
 
 - Docker and Docker Compose
-- Git
 
 ### Setup Steps
 
-1. Clone the repository
+1. Download the required files:
+   - [`docker-compose.yml`](https://raw.githubusercontent.com/SilberGecko6917/Zeiterfassung/main/docker-compose.yml)
+   - [`.env.example`](https://raw.githubusercontent.com/SilberGecko6917/Zeiterfassung/main/.env.example)
+
+2. Create your environment file:
 ```bash
-git clone https://github.com/SilberGecko6917/Zeiterfassung.git
-cd Zeiterfassung
-```
-2. Create a `.env.production` file using the template in `.env.example`
-```run
 cp .env.example .env.production
-nano .env.production
 ```
-3. Build and start the application
-```run
+
+3. Start the application:
+```bash
 docker compose up -d
 ```
+
+
+> **Note:** The database is automatically created in the `./data` folder and persists between container updates.
 
 ### Initial Configuration
 1. Navigate to `https://your-domain.com/install` in your browser
@@ -47,18 +48,91 @@ docker compose up -d
    - **Auto Redirect**: Enable/disable automatic redirect from login to dashboard
 
 ## Updating
-```run
-sudo ./update.sh
+
+To update to the latest version:
+```bash
+docker compose down
+docker compose pull
+docker compose up -d
 ```
 
-### Development
-```run
-npm i --legacy-peer-deps
+## Alternative: Full Repository Setup (for developers)
+
+If you want to modify the code or contribute to the project:
+
+### Prerequisites
+- Docker and Docker Compose  
+- Git
+
+### Setup Steps
+1. Clone the repository:
+```bash
+git clone https://github.com/SilberGecko6917/Zeiterfassung.git
+cd Zeiterfassung
+```
+
+2. Create environment file:
+```bash
+cp .env.example .env.production
+# Edit .env.production with your settings
+```
+
+3. Start with pre-built image:
+```bash
+docker compose up -d
+```
+
+### Updating (Repository Setup)
+```bash
+git pull
+docker compose down
+docker compose pull
+docker compose up -d
+```
+
+## Upgrade from Old System
+
+If you're upgrading from the old local build system:
+
+### Quick Migration
+
+1. **Stop and backup:**
+```bash
+docker compose down
+cp prisma/data.db backup_data.db  # backup your database
+```
+
+2. **Update files:**
+```bash
+git pull  # or download new docker-compose.yml
+mkdir -p data && cp prisma/data.db data/data.db  # move database
+mv .env .env.production  # rename environment file
+```
+
+3. **Start new system:**
+```bash
+docker compose up -d
+```
+
+## Development
+
+For local development with live reload:
+
+### Prerequisites
+- Node.js 20+
+- npm
+
+### Setup
+```bash
+# Install dependencies
+npm install
+
+# Copy environment file for development
+cp .env.example .env
+
+# Start development server
 npm run dev
-```
 
-### Technical Stack
-    - Frontend: Next.js with TypeScript
-    - Database: SQLite via Prisma
-    - Containerization: Docker & Docker Compose
-    - Styling: Tailwind CSS
+# OR use Docker for development with live reload
+docker compose -f docker-compose.dev.yml up
+```
