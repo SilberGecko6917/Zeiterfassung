@@ -54,6 +54,6 @@ docker compose exec app npm run clear-cache
 
 echo ""
 echo -e "${GREEN}Update abgeschlossen!${RESET}"
-echo -e "${YELLOW}Hinweis:${RESET} Du wirst eventuell aus der Anwendung ausgeloggt. Einfach wieder einloggen, ist keine Tragödie."
+echo -e "${YELLOW}Hinweis:${RESET} Nach dem Update kann es passieren, dass deine aktuelle Sitzung ungültig wird. Falls etwas nicht lädt oder komisch wirkt, einfach einmal neu einloggen."
 echo ""
 echo -e "${CYAN}Backup gespeichert unter:${RESET} backups/zeiterfassung_backup_${BACKUP_DATE}.tar.gz"
