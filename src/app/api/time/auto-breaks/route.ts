@@ -5,24 +5,38 @@ import { LogAction, LogEntity } from "@/lib/enums";
 import { checkIsAdmin, IP } from "@/lib/server/auth-actions";
 
 export async function POST(request: Request) {
-  // Check if the request is from an admin
-  const isAdmin = await checkIsAdmin();
-
-  if (!isAdmin) {
-    const headers = request.headers;
-    const authHeader = headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    const token = authHeader.split(" ")[1];
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    if (token !== process.env.CRONEJOB_KEY)
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
+    // Check if the request is from an admin
+    let isAuthorized = false;
+    
+    try {
+      const isAdmin = await checkIsAdmin();
+      isAuthorized = isAdmin;
+    } catch (error) {
+      console.error("Error checking admin status:", error);
+      // Continue to check token-based auth
+    }
+
+    if (!isAuthorized) {
+      const headers = request.headers;
+      const authHeader = headers.get("Authorization");
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+      }
+      const token = authHeader.split(" ")[1];
+      if (!token) {
+        return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+      }
+      if (token !== process.env.CRONEJOB_KEY) {
+        return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+      }
+      isAuthorized = true;
+    }
+
+    if (!isAuthorized) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
     // Get date from request or use today
     const body = await request.json().catch(() => ({}));
     const targetDate = body.date ? new Date(body.date) : new Date();
@@ -187,7 +201,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Error inserting automatic breaks:", error);
     return NextResponse.json(
-      { error: "Failed to insert automatic breaks" },
+      { success: false, error: "Failed to insert automatic breaks" },
       { status: 500 }
     );
   }
