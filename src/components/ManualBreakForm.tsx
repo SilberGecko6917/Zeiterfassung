@@ -62,12 +62,12 @@ export function ManualBreakForm({ onBreakAdded }: { onBreakAdded?: () => void })
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline"><Coffee /> Pause Eintragen</Button>
+        <Button variant="outline"><Coffee /> Pause eintragen</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Trage eine pause ein</DialogTitle>
+            <DialogTitle>Trage eine Pause ein</DialogTitle>
             <DialogDescription>
               Bitte gib das Datum und die Uhrzeit der Pause an. Die Pause wird in der Zeiterfassung gespeichert.
             </DialogDescription>
