@@ -1,4 +1,4 @@
-import { format, subDays } from "date-fns";
+import { subDays } from "date-fns";
 import cron from "node-cron";
 
 let taskRegistered = false;
@@ -17,12 +17,26 @@ async function processBreaksForDate(targetDate: Date) {
       }),
     });
 
+    // Check if response is OK before parsing
+    if (!response.ok) {
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const errorData = await response.json();
+        console.error("Failed to process breaks:", errorData.error || `HTTP ${response.status}`);
+      } else {
+        const errorText = await response.text();
+        console.error("Failed to process breaks:", errorText || `HTTP ${response.status}`);
+      }
+      return;
+    }
+
     const result = await response.json();
 
     if (result.success) {
       console.log(
         `Successfully processed breaks for ${result.processedUsers} users`
       );
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       result.breaks.forEach((breakInfo: any) => {
         console.log(
           `- User: ${breakInfo.userName}, Break duration: ${breakInfo.breakDuration} minutes`

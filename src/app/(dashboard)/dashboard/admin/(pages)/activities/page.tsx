@@ -3,8 +3,8 @@
 import { useEffect, useState, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, Edit, Trash, X, RefreshCw } from "lucide-react";
-import { format, subDays, isSameDay } from "date-fns";
+import { Calendar, Clock, Edit, Trash, X, RefreshCw, CalendarDays } from "lucide-react";
+import { format, subDays, isSameDay, startOfDay, endOfDay } from "date-fns";
 import { de } from "date-fns/locale";
 import { Label } from "@/components/ui/label";
 import {
@@ -14,6 +14,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
   useAdminActivities,
   TimeEntryWithUser,
@@ -33,9 +39,11 @@ export default function ActivitiesPage() {
     isLoading,
     filteredUserId,
     filteredUserName,
+    dateRange,
     fetchTimeEntries,
     filterByUser,
     clearFilter,
+    updateDateRange,
   } = useAdminActivities();
 
   // Time entry dialogs
@@ -48,6 +56,12 @@ export default function ActivitiesPage() {
     useState<TimeEntryWithUser | null>(null);
   const [timeEntryToDelete, setTimeEntryToDelete] =
     useState<TimeEntryWithUser | null>(null);
+
+  // Date range selector state
+  const [dateRangePreset, setDateRangePreset] = useState<string>("7");
+  const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
+  const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
+  const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
 
   // Add this ref to track if initial data has been loaded
   const initialLoadComplete = useRef(false);
@@ -66,6 +80,51 @@ export default function ActivitiesPage() {
   const getUserName = (userId: string) => {
     const user = users.find((u) => u.id === userId);
     return user ? user.name : `Benutzer ${userId}`;
+  };
+
+  // Handle date range preset change
+  const handleDateRangePresetChange = (value: string) => {
+    setDateRangePreset(value);
+    
+    if (value === "custom") {
+      setShowCustomDatePicker(true);
+      // Initialize custom dates with current range
+      setCustomStartDate(dateRange.start);
+      setCustomEndDate(dateRange.end);
+    } else {
+      setShowCustomDatePicker(false);
+      const endDate = endOfDay(new Date());
+      let startDate: Date;
+      
+      switch (value) {
+        case "7":
+          startDate = startOfDay(subDays(new Date(), 7));
+          break;
+        case "14":
+          startDate = startOfDay(subDays(new Date(), 14));
+          break;
+        case "30":
+          startDate = startOfDay(subDays(new Date(), 30));
+          break;
+        case "90":
+          startDate = startOfDay(subDays(new Date(), 90));
+          break;
+        default:
+          startDate = startOfDay(subDays(new Date(), 7));
+      }
+      
+      updateDateRange(startDate, endDate);
+    }
+  };
+
+  // Handle custom date range application
+  const handleApplyCustomDateRange = () => {
+    if (customStartDate && customEndDate) {
+      const start = startOfDay(customStartDate);
+      const end = endOfDay(customEndDate);
+      
+      updateDateRange(start, end);
+    }
   };
 
   // Modify the useEffect hook to prevent infinite refreshes
@@ -120,8 +179,8 @@ export default function ActivitiesPage() {
           </h1>
           <p className="text-muted-foreground mt-2">
             {filteredUserName
-              ? `Aktivitäten von ${filteredUserName} (letzte 7 Tage)`
-              : "Aktivitäten der letzten 7 Tage"}
+              ? `Aktivitäten von ${filteredUserName}`
+              : "Zeiteinträge anzeigen"}
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 items-center w-full sm:w-auto">
@@ -146,69 +205,164 @@ export default function ActivitiesPage() {
       {/* Filter box */}
       <Card className="mb-4">
         <CardContent className="py-4">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-            <div className="w-full sm:w-72">
-              <Label htmlFor="userFilter" className="mb-1 block">
-                Nach Benutzer filtern
-              </Label>
-              <Select
-                value={filteredUserId || "all"}
-                onValueChange={(value) => {
-                  if (value === "all") {
-                    handleClearFilter();
-                  } else {
-                    const selectedUser = users.find((u) => u.id === value);
-                    if (selectedUser && selectedUser.name) {
-                      filterByUser(value, selectedUser.name);
-                      // Update URL to reflect filter
-                      router.push(
-                        `/dashboard/admin/activities?userId=${value}&userName=${encodeURIComponent(
-                          selectedUser.name
-                        )}`
-                      );
+          <div className="flex flex-col gap-4">
+            {/* Filters Row - User and Date Range */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {/* User Filter */}
+              <div className="w-full">
+                <Label htmlFor="userFilter" className="mb-1 block">
+                  Nach Benutzer filtern
+                </Label>
+                <Select
+                  value={filteredUserId || "all"}
+                  onValueChange={(value) => {
+                    if (value === "all") {
+                      handleClearFilter();
+                    } else {
+                      const selectedUser = users.find((u) => u.id === value);
+                      if (selectedUser && selectedUser.name) {
+                        filterByUser(value, selectedUser.name);
+                        router.push(
+                          `/dashboard/admin/activities?userId=${value}&userName=${encodeURIComponent(
+                            selectedUser.name
+                          )}`
+                        );
+                      }
                     }
-                  }
-                }}
-              >
-                <SelectTrigger id="userFilter">
-                  <SelectValue placeholder="Benutzer auswählen" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Alle Benutzer</SelectItem>
-                  {users.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex-1">
-              <Label htmlFor="dateRangeFilter" className="mb-1 block">
-                Zeitraum
-              </Label>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center text-sm text-muted-foreground bg-muted/50 px-3 py-2 rounded-md w-full truncate">
-                  <Calendar className="h-4 w-4 mr-1 flex-shrink-0" />
-                  <span className="truncate">
-                    {format(subDays(new Date(), 7), "dd.MM.yyyy", {
-                      locale: de,
-                    })}{" "}
-                    - {format(new Date(), "dd.MM.yyyy", { locale: de })}
-                  </span>
-                </div>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="flex-shrink-0"
-                  onClick={() => fetchTimeEntries(filteredUserId)}
-                  title="Aktualisieren"
+                  }}
                 >
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
+                  <SelectTrigger id="userFilter">
+                    <SelectValue placeholder="Benutzer auswählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle Benutzer</SelectItem>
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Date Range Preset */}
+              <div className="w-full">
+                <Label htmlFor="dateRangePreset" className="mb-1 block">
+                  Zeitraum
+                </Label>
+                <Select
+                  value={dateRangePreset}
+                  onValueChange={handleDateRangePresetChange}
+                >
+                  <SelectTrigger id="dateRangePreset">
+                    <SelectValue placeholder="Zeitraum auswählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="7">Letzte 7 Tage</SelectItem>
+                    <SelectItem value="14">Letzte 14 Tage</SelectItem>
+                    <SelectItem value="30">Letzte 30 Tage</SelectItem>
+                    <SelectItem value="90">Letzte 90 Tage</SelectItem>
+                    <SelectItem value="custom">Benutzerdefiniert</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Current Date Range Display */}
+              <div className="w-full sm:col-span-2 lg:col-span-1 xl:col-span-2">
+                <Label className="mb-1 block">Aktueller Zeitraum</Label>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center text-sm text-muted-foreground bg-muted/50 px-3 py-2 rounded-md flex-1 min-w-0">
+                    <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
+                    <span className="truncate">
+                      {format(dateRange.start, "dd.MM.yyyy", { locale: de })} -{" "}
+                      {format(dateRange.end, "dd.MM.yyyy", { locale: de })}
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="flex-shrink-0"
+                    onClick={() => fetchTimeEntries(filteredUserId)}
+                    title="Aktualisieren"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
+
+            {/* Custom Date Range Picker */}
+            {showCustomDatePicker && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2 border-t">
+                <div className="w-full">
+                  <Label htmlFor="customStartDate" className="mb-1 block">
+                    Startdatum
+                  </Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        id="customStartDate"
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        <CalendarDays className="mr-2 h-4 w-4" />
+                        {customStartDate
+                          ? format(customStartDate, "dd.MM.yyyy", { locale: de })
+                          : "Datum wählen"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={customStartDate}
+                        onSelect={setCustomStartDate}
+                        initialFocus
+                        disabled={(date) => date > new Date()}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="w-full">
+                  <Label htmlFor="customEndDate" className="mb-1 block">
+                    Enddatum
+                  </Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        id="customEndDate"
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        <CalendarDays className="mr-2 h-4 w-4" />
+                        {customEndDate
+                          ? format(customEndDate, "dd.MM.yyyy", { locale: de })
+                          : "Datum wählen"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={customEndDate}
+                        onSelect={setCustomEndDate}
+                        initialFocus
+                        disabled={(date) => (customStartDate && date < customStartDate) || date > new Date()}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="w-full flex items-end">
+                  <Button
+                    onClick={handleApplyCustomDateRange}
+                    disabled={!customStartDate || !customEndDate}
+                    className="w-full"
+                  >
+                    Anwenden
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -357,7 +511,7 @@ export default function ActivitiesPage() {
               <Clock className="h-10 w-10 text-muted-foreground mb-4" />
               <p className="text-lg font-medium">Keine Aktivitäten verfügbar</p>
               <p className="text-muted-foreground mt-1">
-                Für die letzten 7 Tage wurden keine Zeiteinträge erfasst
+                Für den gewählten Zeitraum wurden keine Zeiteinträge erfasst
               </p>
             </div>
           )}

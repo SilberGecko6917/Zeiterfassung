@@ -16,17 +16,69 @@ export async function GET(request: NextRequest) {
 
     // Get query parameters
     const url = new URL(request.url);
-    const startDate = url.searchParams.get("startDate");
-    const endDate = url.searchParams.get("endDate");
-    const userId = url.searchParams.get("userId");
+    const startDateParam = url.searchParams.get("startDate");
+    const endDateParam = url.searchParams.get("endDate");
+    const userIdParam = url.searchParams.get("userId");
 
-    // Default to last 7 days if no dates provided
-    const end = endDate ? parseISO(endDate) : new Date();
-    const start = startDate ? parseISO(startDate) : subDays(end, 7);
+    // Validate and parse dates with security checks
+    let startDate: Date;
+    let endDate: Date;
 
-    // Format dates for query
-    const formattedStart = format(start, "yyyy-MM-dd'T'00:00:00'Z'");
-    const formattedEnd = format(end, "yyyy-MM-dd'T'23:59:59'Z'");
+    try {
+      if (!startDateParam || !endDateParam) {
+        // Default to last 7 days if no dates provided
+        endDate = new Date();
+        startDate = subDays(endDate, 7);
+      } else {
+        // Parse dates - parseISO is safe against injection
+        startDate = parseISO(startDateParam);
+        endDate = parseISO(endDateParam);
+
+        // Validate parsed dates
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          return NextResponse.json(
+            { error: "Invalid date format. Use YYYY-MM-DD format" },
+            { status: 400 }
+          );
+        }
+
+        // max 1 year
+        const daysDifference = Math.abs((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysDifference > 365) {
+          return NextResponse.json(
+            { error: "Date range cannot exceed 365 days" },
+            { status: 400 }
+          );
+        }
+
+        // Validate date order
+        if (startDate > endDate) {
+          return NextResponse.json(
+            { error: "Start date must be before or equal to end date" },
+            { status: 400 }
+          );
+        }
+
+        const maxFutureDate = new Date();
+        maxFutureDate.setDate(maxFutureDate.getDate() + 1);
+        if (startDate > maxFutureDate) {
+          return NextResponse.json(
+            { error: "Start date cannot be in the future" },
+            { status: 400 }
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Date parsing error:", error);
+      return NextResponse.json(
+        { error: "Invalid date format" },
+        { status: 400 }
+      );
+    }
+
+    // Format dates for query - use UTC to avoid timezone issues
+    const formattedStart = format(startDate, "yyyy-MM-dd'T'00:00:00'Z'");
+    const formattedEnd = format(endDate, "yyyy-MM-dd'T'23:59:59'Z'");
 
     // Build the where clause with conditional userId filter
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,9 +92,30 @@ export async function GET(request: NextRequest) {
       },
     };
 
-    // Add userId filter if provided
-    if (userId) {
-      whereClause.userId = userId;
+    // Validate and sanitize userId if provided
+    if (userIdParam) {
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const cuidPattern = /^[a-zA-Z0-9_-]{20,30}$/;
+      if (!uuidPattern.test(userIdParam) && !cuidPattern.test(userIdParam)) {
+        return NextResponse.json(
+          { error: "Invalid user ID format" },
+          { status: 400 }
+        );
+      }
+
+      const userExists = await prisma.user.findUnique({
+        where: { id: userIdParam },
+        select: { id: true }
+      });
+
+      if (!userExists) {
+        return NextResponse.json(
+          { error: "User not found" },
+          { status: 404 }
+        );
+      }
+
+      whereClause.userId = userIdParam;
     }
 
     // Get time entries with user info

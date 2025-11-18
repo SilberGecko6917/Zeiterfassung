@@ -24,21 +24,44 @@ export function useAdminActivities() {
   const [isLoading, setIsLoading] = useState(false);
   const [filteredUserId, setFilteredUserId] = useState<string | null>(null);
   const [filteredUserName, setFilteredUserName] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState<{ start: Date; end: Date }>(() => ({
+    start: subDays(new Date(), 7),
+    end: new Date()
+  }));
   
-  const fetchTimeEntries = useCallback(async (userId: string | null = null, startDaysAgo = 7) => {
+  const fetchTimeEntries = useCallback(async (userId: string | null = null, startDate?: Date, endDate?: Date) => {
     try {
       setIsLoading(true);
-      const endDate = new Date();
-      const startDate = subDays(endDate, startDaysAgo);
+      
+      // Use provided dates or create new defaults
+      let actualStartDate: Date;
+      let actualEndDate: Date;
+      
+      if (startDate && endDate) {
+        actualStartDate = startDate;
+        actualEndDate = endDate;
+      } else {
+        // If no dates provided, use current dateRange state
+        actualEndDate = dateRange.end;
+        actualStartDate = dateRange.start;
+      }
+
+      // Validate dates
+      if (isNaN(actualStartDate.getTime()) || isNaN(actualEndDate.getTime())) {
+        throw new Error("Invalid date range");
+      }
+
+      // Update date range state if custom dates were provided
+      setDateRange({ start: actualStartDate, end: actualEndDate });
 
       let url = `/api/admin/time-entries?startDate=${format(
-        startDate,
+        actualStartDate,
         "yyyy-MM-dd"
-      )}&endDate=${format(endDate, "yyyy-MM-dd")}`;
+      )}&endDate=${format(actualEndDate, "yyyy-MM-dd")}`;
 
       // Filter by user if userId is provided
       if (userId) {
-        url += `&userId=${userId}`;
+        url += `&userId=${encodeURIComponent(userId)}`;
         setFilteredUserId(userId);
       } else {
         setFilteredUserId(null);
@@ -46,6 +69,11 @@ export function useAdminActivities() {
       }
 
       const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
       setTimeEntries(data.entries || []);
     } catch (error) {
@@ -54,7 +82,7 @@ export function useAdminActivities() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [dateRange.end, dateRange.start]);
 
   const createTimeEntry = async (entryData: TimeEntryCreateData): Promise<boolean> => {
     try {
@@ -144,16 +172,27 @@ export function useAdminActivities() {
     fetchTimeEntries();
   };
 
+  const updateDateRange = (start: Date, end: Date) => {
+    if (start > end) {
+      toast.error("Startdatum muss vor dem Enddatum liegen");
+      return;
+    }
+    setDateRange({ start, end });
+    fetchTimeEntries(filteredUserId, start, end);
+  };
+
   return {
     timeEntries,
     isLoading,
     filteredUserId,
     filteredUserName,
+    dateRange,
     fetchTimeEntries,
     createTimeEntry,
     updateTimeEntry,
     deleteTimeEntry,
     filterByUser,
-    clearFilter
+    clearFilter,
+    updateDateRange
   };
 }
