@@ -30,13 +30,6 @@ async function processBreaksForDate(targetDate: Date) {
       return;
     }
 
-    // Parse JSON response
-    const contentType = response.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-      console.error("Invalid response format: expected JSON but got", contentType);
-      return;
-    }
-
     const result = await response.json();
 
     if (result.success) {

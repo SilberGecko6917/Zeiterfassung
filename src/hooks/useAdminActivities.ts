@@ -41,9 +41,9 @@ export function useAdminActivities() {
         actualStartDate = startDate;
         actualEndDate = endDate;
       } else {
-        // If no dates provided, use current state or defaults
-        actualEndDate = new Date();
-        actualStartDate = subDays(actualEndDate, 7);
+        // If no dates provided, use current dateRange state
+        actualEndDate = dateRange.end;
+        actualStartDate = dateRange.start;
       }
 
       // Validate dates
@@ -51,15 +51,8 @@ export function useAdminActivities() {
         throw new Error("Invalid date range");
       }
 
-      if (actualStartDate > actualEndDate) {
-        toast.error("Startdatum muss vor dem Enddatum liegen");
-        return;
-      }
-
       // Update date range state if custom dates were provided
-      if (startDate && endDate) {
-        setDateRange({ start: startDate, end: endDate });
-      }
+      setDateRange({ start: actualStartDate, end: actualEndDate });
 
       let url = `/api/admin/time-entries?startDate=${format(
         actualStartDate,
@@ -89,7 +82,7 @@ export function useAdminActivities() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [dateRange.end, dateRange.start]);
 
   const createTimeEntry = async (entryData: TimeEntryCreateData): Promise<boolean> => {
     try {

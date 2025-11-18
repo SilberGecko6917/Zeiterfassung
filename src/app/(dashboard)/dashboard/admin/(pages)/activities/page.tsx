@@ -98,19 +98,19 @@ export default function ActivitiesPage() {
       
       switch (value) {
         case "7":
-          startDate = startOfDay(subDays(endDate, 7));
+          startDate = startOfDay(subDays(new Date(), 7));
           break;
         case "14":
-          startDate = startOfDay(subDays(endDate, 14));
+          startDate = startOfDay(subDays(new Date(), 14));
           break;
         case "30":
-          startDate = startOfDay(subDays(endDate, 30));
+          startDate = startOfDay(subDays(new Date(), 30));
           break;
         case "90":
-          startDate = startOfDay(subDays(endDate, 90));
+          startDate = startOfDay(subDays(new Date(), 90));
           break;
         default:
-          startDate = startOfDay(subDays(endDate, 7));
+          startDate = startOfDay(subDays(new Date(), 7));
       }
       
       updateDateRange(startDate, endDate);
@@ -123,13 +123,7 @@ export default function ActivitiesPage() {
       const start = startOfDay(customStartDate);
       const end = endOfDay(customEndDate);
       
-      if (start > end) {
-        // Error handling is in updateDateRange
-        return;
-      }
-      
       updateDateRange(start, end);
-      // Keep the custom date picker visible
     }
   };
 
@@ -323,6 +317,7 @@ export default function ActivitiesPage() {
                         selected={customStartDate}
                         onSelect={setCustomStartDate}
                         initialFocus
+                        disabled={(date) => date > new Date()}
                       />
                     </PopoverContent>
                   </Popover>

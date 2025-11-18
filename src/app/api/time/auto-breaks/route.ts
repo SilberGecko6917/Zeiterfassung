@@ -20,17 +20,16 @@ export async function POST(request: Request) {
     if (!isAuthorized) {
       const headers = request.headers;
       const authHeader = headers.get("Authorization");
-      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      let tokenIsValid = false;
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        const token = authHeader.split(" ")[1];
+        if (token && token === process.env.CRONEJOB_KEY) {
+          tokenIsValid = true;
+        }
+      }
+      if (!tokenIsValid) {
         return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
       }
-      const token = authHeader.split(" ")[1];
-      if (!token) {
-        return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-      }
-      if (token !== process.env.CRONEJOB_KEY) {
-        return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-      }
-      isAuthorized = true;
     }
 
     // Get date from request or use today
