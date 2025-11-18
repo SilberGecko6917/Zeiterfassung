@@ -4,8 +4,11 @@ services:
     restart: always
     ports:
       - "3000:3000"
-    env_file:
-      - .env.production
+    environment:
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - CRONEJOB_KEY=${CRONEJOB_KEY}
+      - NODE_ENV=production
+
     volumes:
       - ./data:/app/prisma
-
