@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 import { RoleUtils } from "@/lib/role";
-import { getRolePermissions } from "@/lib/settings";
+import { defaultRolePermissions } from "@/lib/permission-defs";
 
 // Map dashboard routes to required permissions
 const routePermissionMap: Record<string, string> = {
@@ -60,21 +60,12 @@ export async function middleware(request: NextRequest) {
       
       for (const [route, permission] of Object.entries(routePermissionMap)) {
         if (pathname.startsWith(route)) {
-          try {
-            const rolePermissions = await getRolePermissions();
-            const userPermissions = rolePermissions[userRole] || [];
-            hasRequiredPermission = userPermissions.includes(permission);
-            
-            if (!hasRequiredPermission) {
-              console.warn(`[Middleware] Permission denied: ${permission} required for ${pathname}, role: ${userRole}`);
-              return NextResponse.redirect(new URL("/dashboard?error=unauthorized", request.url));
-            }
-          } catch (error) {
-            console.error("[Middleware] Error checking permissions:", error);
-            // Fallback to role-based check if permission system fails
-            if (!RoleUtils.isAdmin(userRole)) {
-              return NextResponse.redirect(new URL("/dashboard?error=unauthorized", request.url));
-            }
+          const userPermissions = defaultRolePermissions[userRole] || [];
+          hasRequiredPermission = userPermissions.includes(permission);
+
+          if (!hasRequiredPermission) {
+            console.warn(`[Middleware] Permission denied: ${permission} required for ${pathname}, role: ${userRole}`);
+            return NextResponse.redirect(new URL("/dashboard?error=unauthorized", request.url));
           }
           break;
         }
@@ -106,27 +97,15 @@ export async function middleware(request: NextRequest) {
     
     for (const [route, permission] of Object.entries(apiPermissionMap)) {
       if (pathname.startsWith(route)) {
-        try {
-          const rolePermissions = await getRolePermissions();
-          const userPermissions = rolePermissions[userRole] || [];
-          hasRequiredPermission = userPermissions.includes(permission);
-          
-          if (!hasRequiredPermission) {
-            console.warn(`[Middleware] API permission denied: ${permission} required for ${pathname}, role: ${userRole}`);
-            return NextResponse.json(
-              { error: "Insufficient permissions" },
-              { status: 403 }
-            );
-          }
-        } catch (error) {
-          console.error("[Middleware] Error checking API permissions:", error);
-          // Fallback to admin check if permission system fails
-          if (!RoleUtils.isAdmin(userRole)) {
-            return NextResponse.json(
-              { error: "Admin access required" },
-              { status: 403 }
-            );
-          }
+        const userPermissions = defaultRolePermissions[userRole] || [];
+        hasRequiredPermission = userPermissions.includes(permission);
+
+        if (!hasRequiredPermission) {
+          console.warn(`[Middleware] API permission denied: ${permission} required for ${pathname}, role: ${userRole}`);
+          return NextResponse.json(
+            { error: "Insufficient permissions" },
+            { status: 403 }
+          );
         }
         break;
       }
@@ -141,16 +120,24 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Helper for reading public settings via API (edge-safe)
+  async function fetchPublicSetting<T>(key: string, fallback: T): Promise<T> {
+    try {
+      const url = new URL(`/api/settings?key=${encodeURIComponent(key)}`, request.url);
+      const res = await fetch(url, { headers: { accept: "application/json" } });
+      if (!res.ok) return fallback;
+      const data = await res.json();
+      return (data.value as T) ?? fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
   // Root page redirect - check if landing page is disabled
   if (pathname === "/") {
-    try {
-      const { getSetting } = await import("@/lib/settings");
-      const disableLanding = await getSetting<boolean>("disable_landing_page");
-      if (disableLanding) {
-        return NextResponse.redirect(new URL("/login", request.url));
-      }
-    } catch (error) {
-      console.error("[Middleware] Error checking landing page setting:", error);
+    const disableLanding = await fetchPublicSetting<boolean>("disable_landing_page", false);
+    if (disableLanding) {
+      return NextResponse.redirect(new URL("/login", request.url));
     }
   }
 
@@ -162,14 +149,9 @@ export async function middleware(request: NextRequest) {
     });
 
     if (token) {
-      try {
-        const { getSetting } = await import("@/lib/settings");
-        const autoRedirect = await getSetting<boolean>("auto_redirect_from_login");
-        if (autoRedirect) {
-          return NextResponse.redirect(new URL("/dashboard", request.url));
-        }
-      } catch (error) {
-        console.error("[Middleware] Error checking auto redirect setting:", error);
+      const autoRedirect = await fetchPublicSetting<boolean>("auto_redirect_from_login", true);
+      if (autoRedirect) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
       }
     }
   }

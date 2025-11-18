@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { availablePermissions, defaultRolePermissions } from "@/lib/permission-defs";
 
 // Define the types of settings we support
 export type SettingType = "string" | "number" | "boolean" | "text" | "select" | "color";
@@ -16,68 +17,9 @@ export interface SettingDefinition {
 }
 
 // Define permission types for better type safety
-export interface Permission {
-  id: string;
-  name: string;
-  description: string;
-  category: "time" | "user" | "vacation" | "report" | "system";
-}
-
-// Define available permissions
-export const availablePermissions: Permission[] = [
-  // Time tracking permissions
-  { id: "view_own_time", name: "Eigene Zeiten einsehen", description: "Kann eigene Zeiterfassung einsehen", category: "time" },
-  { id: "edit_own_time", name: "Eigene Zeiten bearbeiten", description: "Kann eigene Zeiterfassungen bearbeiten", category: "time" },
-  { id: "view_all_time", name: "Alle Zeiten einsehen", description: "Kann Zeiterfassung aller Nutzer einsehen", category: "time" },
-  { id: "edit_all_time", name: "Alle Zeiten bearbeiten", description: "Kann Zeiterfassungen aller Nutzer bearbeiten", category: "time" },
-  
-  // User management
-  { id: "view_users", name: "Benutzer einsehen", description: "Kann Benutzerprofile einsehen", category: "user" },
-  { id: "create_users", name: "Benutzer erstellen", description: "Kann neue Benutzer anlegen", category: "user" },
-  { id: "edit_users", name: "Benutzer bearbeiten", description: "Kann Benutzerprofile bearbeiten", category: "user" },
-  { id: "delete_users", name: "Benutzer löschen", description: "Kann Benutzer löschen", category: "user" },
-  
-  // Vacation management
-  { id: "request_vacation", name: "Urlaub beantragen", description: "Kann Urlaub beantragen", category: "vacation" },
-  { id: "manage_all_vacation", name: "Alle Urlaube verwalten", description: "Kann alle Urlaube verwalten", category: "vacation" },
-  
-  // Reports
-  { id: "view_own_reports", name: "Eigene Berichte", description: "Kann Berichte zu eigenen Zeiten einsehen", category: "report" },
-  { id: "view_all_reports", name: "Alle Berichte", description: "Kann alle Berichte einsehen", category: "report" },
-  { id: "export_reports", name: "Berichte exportieren", description: "Kann Berichte exportieren", category: "report" },
-  
-  // System settings
-  { id: "manage_settings", name: "Einstellungen verwalten", description: "Kann Systemeinstellungen verwalten", category: "system" },
-];
-
-// Default role permissions
-export const defaultRolePermissions = {
-  ADMIN: availablePermissions.map(p => p.id), // All permissions
-  MANAGER: [
-    // Time tracking
-    "view_own_time", 
-    "edit_own_time", 
-    "view_all_time",
-    
-    // Users
-    "view_users",
-    
-    // Vacation
-    "request_vacation",
-    "manage_all_vacation",
-    
-    // Reports
-    "view_own_reports", 
-    "view_all_reports",
-    "export_reports"
-  ],
-  USER: [
-    "view_own_time", 
-    "edit_own_time",
-    "request_vacation",
-    "view_own_reports"
-  ]
-};
+// Re-export for existing imports elsewhere
+export type { Permission } from "@/lib/permission-defs";
+export { availablePermissions, defaultRolePermissions };
 
 // Define all settings
 export const settingsDefinitions: SettingDefinition[] = [
@@ -149,6 +91,20 @@ export const settingsDefinitions: SettingDefinition[] = [
   },
 
   // Localization Settings
+  {
+    key: "date_format",
+    type: "select",
+    label: "Datumsformat",
+    description: "Format für die Anzeige von Datumsangaben.",
+    defaultValue: "dd.MM.yyyy",
+    category: "localization",
+    options: [
+      { value: "dd.MM.yyyy", label: "TT.MM.JJJJ (z. B. 18.11.2025)" },
+      { value: "MM/dd/yyyy", label: "MM/TT/JJJJ (z. B. 11/18/2025)" },
+      { value: "yyyy-MM-dd", label: "JJJJ-MM-TT (ISO 8601)" }
+    ],
+    wip: true,
+  },
   {
     key: "time_format",
     type: "select",
