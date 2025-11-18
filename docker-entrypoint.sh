@@ -1,4 +1,5 @@
 #!/bin/sh
+cd /app || exit
 echo "Applying Prisma migrations..."
 npx prisma migrate deploy
 
