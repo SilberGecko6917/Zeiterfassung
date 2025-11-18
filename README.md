@@ -29,7 +29,7 @@ A modern time tracking system built with Next.js.
 
 2. Create your environment file:
 ```bash
-cp .env.example .env.production
+cp .env.example .env
 ```
 
 3. Start the application:
@@ -73,8 +73,8 @@ cd Zeiterfassung
 
 2. Create environment file:
 ```bash
-cp .env.example .env.production
-# Edit .env.production with your settings
+cp .env.example .env
+# Edit .env with your settings
 ```
 
 3. Start with pre-built image:
@@ -106,7 +106,6 @@ cp prisma/data.db backup_data.db  # backup your database
 ```bash
 git pull  # or download new docker-compose.yml
 mkdir -p data && cp prisma/data.db data/data.db  # move database
-mv .env .env.production  # rename environment file
 ```
 
 3. **Start new system:**
