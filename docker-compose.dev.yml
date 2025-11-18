@@ -1,3 +1,4 @@
+version: '3.8'
 services:
   app:
     build:
@@ -6,11 +7,16 @@ services:
     restart: always
     ports:
       - "3000:3000"
+    environment:
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - CRONEJOB_KEY=${CRONEJOB_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      - NEXT_PUBLIC_LOGIN_REDIRECT=True
+      - NODE_ENV=development
     volumes:
       - ./src:/app/src
       - ./public:/app/public
       - ./next.config.ts:/app/next.config.ts
       - ./prisma:/app/prisma
       - ./scripts:/app/scripts
-    env_file:
-      - .env
