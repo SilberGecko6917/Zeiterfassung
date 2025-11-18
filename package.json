@@ -1,6 +1,6 @@
 {
   "name": "zeiterfassung",
-  "version": "1.4",
+  "version": "1.4.3",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -43,6 +43,7 @@
     "react-day-picker": "^9.11.1",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.56.2",
+    "react-markdown": "^10.1.0",
     "sonner": "^2.0.3",
     "tailwind-merge": "^3.2.0",
     "vaul": "^1.1.2",

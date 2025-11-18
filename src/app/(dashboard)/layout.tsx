@@ -4,6 +4,7 @@ import AdminButton from "@/components/AdminButton";
 import ManagerButton from "@/components/ManagerButton";
 import { LogOutToggle } from "@/components/logout-button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import UpdateNotification from "@/components/UpdateNotification";
 import { RoleUtils } from "@/lib/role";
 import { useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
@@ -54,6 +55,7 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen flex items-center justify-center">
+      <UpdateNotification userRole={session?.user?.role} />
       <div
         className={`absolute top-4 right-4 flex items-center gap-2 ${
           isAdminPage ? "md:flex hidden" : ""
