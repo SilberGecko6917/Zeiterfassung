@@ -94,8 +94,9 @@ export async function GET(request: NextRequest) {
 
     // Validate and sanitize userId if provided
     if (userIdParam) {
-      const userIdPattern = /^[a-zA-Z0-9_-]+$/;
-      if (!userIdPattern.test(userIdParam)) {
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const cuidPattern = /^[a-zA-Z0-9_-]{20,30}$/;
+      if (!uuidPattern.test(userIdParam) && !cuidPattern.test(userIdParam)) {
         return NextResponse.json(
           { error: "Invalid user ID format" },
           { status: 400 }

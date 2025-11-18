@@ -47,7 +47,7 @@ export function useAdminActivities() {
       }
 
       // Validate dates
-      if (!actualStartDate || !actualEndDate) {
+      if (isNaN(actualStartDate.getTime()) || isNaN(actualEndDate.getTime())) {
         throw new Error("Invalid date range");
       }
 

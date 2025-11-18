@@ -33,10 +33,6 @@ export async function POST(request: Request) {
       isAuthorized = true;
     }
 
-    if (!isAuthorized) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
-
     // Get date from request or use today
     const body = await request.json().catch(() => ({}));
     const targetDate = body.date ? new Date(body.date) : new Date();
