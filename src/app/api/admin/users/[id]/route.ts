@@ -6,10 +6,15 @@ import { LogAction, LogEntity } from "@/lib/enums";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-// Shared update logic
-async function updateUserHandler(
+const ROLE_HIERARCHY: Record<string, number> = {
+  ADMIN: 3,
+  MANAGER: 2,
+  USER: 1,
+};
+
+export async function PATCH(
   request: NextRequest,
-  params: { id: string }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const isAdmin = await checkIsAdmin();
@@ -18,11 +23,11 @@ async function updateUserHandler(
     if (!isAdmin || !session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
-    const userId = params.id;
+
+    const userId = (await params).id;
     const body = await request.json();
     const { name, email, password, role } = body;
 
-    // Validate input
     if (!name || !email) {
       return NextResponse.json(
         { error: "Name and email are required" },
@@ -30,7 +35,6 @@ async function updateUserHandler(
       );
     }
 
-    // Check if email is already in use by another user
     const existingUser = await prisma.user.findFirst({
       where: {
         email,
@@ -45,7 +49,6 @@ async function updateUserHandler(
       );
     }
 
-    // Prepare update data
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateData: any = {
       name,
@@ -53,12 +56,10 @@ async function updateUserHandler(
       role: role || "USER",
     };
 
-    // Only update password if provided
     if (password && password.trim() !== "") {
       updateData.password = await bcrypt.hash(password, 10);
     }
 
-    // Update user
     const user = await prisma.user.update({
       where: { id: userId },
       data: updateData,
@@ -100,25 +101,6 @@ async function updateUserHandler(
   }
 }
 
-// Update a user (PATCH method)
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const resolvedParams = await params;
-  return updateUserHandler(request, resolvedParams);
-}
-
-// Update a user (PUT method for backward compatibility) (PUT method for backward compatibility)
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const resolvedParams = await params;
-  return updateUserHandler(request, resolvedParams);
-}
-
-// Delete a user
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -133,7 +115,13 @@ export async function DELETE(
 
     const userId = (await params).id;
 
-    // Check if user exists
+    if (userId === session.user.id) {
+      return NextResponse.json(
+        { error: "Cannot delete your own account" },
+        { status: 403 }
+      );
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: userId },
     });
@@ -142,12 +130,37 @@ export async function DELETE(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Delete user's time entries first (to avoid foreign key constraint errors)
+    const totalUsers = await prisma.user.count();
+    if (totalUsers <= 1) {
+      return NextResponse.json(
+        { error: "Cannot delete the last account in the system" },
+        { status: 403 }
+      );
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    });
+
+    if (!currentUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    const currentUserLevel = ROLE_HIERARCHY[currentUser.role] || 0;
+    const targetUserLevel = ROLE_HIERARCHY[user.role] || 0;
+
+    if (targetUserLevel >= currentUserLevel) {
+      return NextResponse.json(
+        { error: "Cannot delete users with equal or higher role" },
+        { status: 403 }
+      );
+    }
+
     await prisma.trackedTime.deleteMany({
       where: { userId },
     });
 
-    // Delete user
     await prisma.user.delete({
       where: { id: userId },
     });
