@@ -129,7 +129,7 @@ npm install
 # Copy environment file for development
 cp .env.example .env
 
-# Start development server
+# Start development server (recomendet)
 npm run dev
 
 # OR use Docker for development with live reload
