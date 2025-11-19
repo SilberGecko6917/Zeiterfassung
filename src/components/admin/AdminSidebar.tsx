@@ -2,7 +2,7 @@ import { Calendar, ClipboardList, Coffee, Download, FileText, Info, LayoutDashbo
 import { Button } from "../ui/button";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { RoleUtils } from "@/lib/role";
 import {
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/drawer";
 import VersionBadge from "@/components/VersionBadge";
 import WhatsNewButton from "@/components/WhatsNewButton";
+import { Badge } from "@/components/ui/badge";
 
 export default function Sidebar() {
     const pathname = usePathname();
@@ -23,6 +24,45 @@ export default function Sidebar() {
     const [open, setOpen] = useState(false);
     const { data: session } = useSession();
     const isAdmin = RoleUtils.isAdmin(session?.user?.role);
+    const [pendingVacationsCount, setPendingVacationsCount] = useState(0);
+
+    const fetchPendingVacations = async () => {
+        try {
+            const response = await fetch("/api/admin/vacation");
+            const data = await response.json();
+            const pendingCount = data.vacations?.filter(
+                (v: { status: string }) => v.status.toLowerCase() === "pending"
+            ).length || 0;
+            setPendingVacationsCount(pendingCount);
+        } catch (error) {
+            console.error("Failed to fetch pending vacations:", error);
+        }
+    };
+
+    useEffect(() => {
+        if (session?.user) {
+            fetchPendingVacations();
+            const interval = setInterval(fetchPendingVacations, 60000);
+            return () => clearInterval(interval);
+        }
+    }, [session]);
+
+    // Refresh when pathname changes
+    useEffect(() => {
+        if (session?.user) {
+            fetchPendingVacations();
+        }
+    }, [pathname, session]);
+
+    // Listen for custom vacation update events
+    useEffect(() => {
+        const handleVacationUpdate = () => {
+            fetchPendingVacations();
+        };
+
+        window.addEventListener('vacationStatusUpdated', handleVacationUpdate);
+        return () => window.removeEventListener('vacationStatusUpdated', handleVacationUpdate);
+    }, []);
 
     const handleNavigation = (section: string) => {
         const path =
@@ -136,14 +176,21 @@ export default function Sidebar() {
                         <li>
                             <button
                                 onClick={() => handleNavigation("vacations")}
-                                className={`flex items-center w-full px-4 py-3 rounded-md text-sm font-medium transition-colors ${
+                                className={`flex items-center justify-between w-full px-4 py-3 rounded-md text-sm font-medium transition-colors ${
                                     isActive("vacations")
                                         ? "bg-primary text-primary-foreground"
                                         : "hover:bg-muted"
                                 }`}
                             >
-                                <Calendar className="mr-3 h-5 w-5" />
-                                Urlaubsanträge
+                                <div className="flex items-center">
+                                    <Calendar className="mr-3 h-5 w-5" />
+                                    Urlaubsanträge
+                                </div>
+                                {pendingVacationsCount > 0 && (
+                                    <Badge variant="destructive" className="ml-auto">
+                                        {pendingVacationsCount}
+                                    </Badge>
+                                )}
                             </button>
                         </li>
                         {isAdmin && (
@@ -290,14 +337,21 @@ export default function Sidebar() {
                                     <li>
                                         <button
                                             onClick={() => handleNavigation("vacations")}
-                                            className={`flex items-center w-full px-4 py-3 rounded-md text-sm font-medium transition-colors ${
+                                            className={`flex items-center justify-between w-full px-4 py-3 rounded-md text-sm font-medium transition-colors ${
                                                 isActive("vacations")
                                                     ? "bg-primary text-primary-foreground"
                                                     : "hover:bg-muted"
                                             }`}
                                         >
-                                            <Calendar className="mr-3 h-5 w-5" />
-                                            Urlaubsanträge
+                                            <div className="flex items-center">
+                                                <Calendar className="mr-3 h-5 w-5" />
+                                                Urlaubsanträge
+                                            </div>
+                                            {pendingVacationsCount > 0 && (
+                                                <Badge variant="destructive" className="ml-auto">
+                                                    {pendingVacationsCount}
+                                                </Badge>
+                                            )}
                                         </button>
                                     </li>
                                     {isAdmin && (

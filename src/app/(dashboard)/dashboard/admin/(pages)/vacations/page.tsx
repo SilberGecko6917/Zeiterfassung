@@ -142,6 +142,7 @@ export default function VacationsPage() {
 
       toast.success("Urlaubsantrag genehmigt");
       fetchVacations();
+      window.dispatchEvent(new Event('vacationStatusUpdated'));
     } catch (error) {
       console.error("Failed to approve vacation:", error);
       toast.error("Fehler beim Genehmigen des Urlaubsantrags");
@@ -169,6 +170,7 @@ export default function VacationsPage() {
 
       toast.success("Urlaubsantrag abgelehnt");
       fetchVacations();
+      window.dispatchEvent(new Event('vacationStatusUpdated'));
     } catch (error) {
       console.error("Failed to reject vacation:", error);
       toast.error("Fehler beim Ablehnen des Urlaubsantrags");
