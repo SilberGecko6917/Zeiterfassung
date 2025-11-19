@@ -11,7 +11,7 @@ services:
       - NEXTAUTH_URL=${NEXTAUTH_URL}
       - CRONEJOB_KEY=${CRONEJOB_KEY}
       - NODE_ENV=development
-      - DATABASE_URL=file:./data/data.db
+
 
     volumes:
       - ./src:/app/src
