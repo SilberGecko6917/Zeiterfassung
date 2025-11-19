@@ -35,6 +35,33 @@ export async function PATCH(
       );
     }
 
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!targetUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    });
+
+    if (!currentUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    const currentUserLevel = ROLE_HIERARCHY[currentUser.role] || 0;
+    const targetUserLevel = ROLE_HIERARCHY[targetUser.role] || 0;
+
+    if (targetUserLevel > currentUserLevel) {
+      return NextResponse.json(
+        { error: "Cannot edit users with higher role" },
+        { status: 403 }
+      );
+    }
+
     const existingUser = await prisma.user.findFirst({
       where: {
         email,

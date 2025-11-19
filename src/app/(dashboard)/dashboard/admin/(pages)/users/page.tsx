@@ -55,6 +55,15 @@ export default function UsersPage() {
     setUserDialogOpen(true);
   };
 
+  const canEditUser = (user: User): boolean => {
+    if (!session?.user?.id || !session?.user?.role) return false;
+    
+    const currentUserLevel = ROLE_HIERARCHY[session.user.role] || 0;
+    const targetUserLevel = ROLE_HIERARCHY[user.role] || 0;
+    
+    return targetUserLevel <= currentUserLevel;
+  };
+
   const canDeleteUser = (user: User): boolean => {
     if (!session?.user?.id || !session?.user?.role) return false;
     if (user.id === session.user.id) return false;
@@ -64,6 +73,21 @@ export default function UsersPage() {
     const targetUserLevel = ROLE_HIERARCHY[user.role] || 0;
     
     return targetUserLevel < currentUserLevel;
+  };
+
+  const getEditTooltip = (user: User): string => {
+    if (!session?.user?.id || !session?.user?.role) {
+      return "Keine Berechtigung";
+    }
+    
+    const currentUserLevel = ROLE_HIERARCHY[session.user.role] || 0;
+    const targetUserLevel = ROLE_HIERARCHY[user.role] || 0;
+    
+    if (targetUserLevel > currentUserLevel) {
+      return "Sie können keine Benutzer mit höherer Rolle bearbeiten";
+    }
+    
+    return "Benutzer bearbeiten";
   };
 
   const getDeleteTooltip = (user: User): string => {
@@ -207,15 +231,23 @@ export default function UsersPage() {
                             <Clock className="h-4 w-4" />
                             <span className="sr-only">Aktivitäten</span>
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleEditUser(user)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                            <span className="sr-only">Bearbeiten</span>
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleEditUser(user)}
+                                disabled={!canEditUser(user)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                                <span className="sr-only">Bearbeiten</span>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{getEditTooltip(user)}</p>
+                            </TooltipContent>
+                          </Tooltip>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
