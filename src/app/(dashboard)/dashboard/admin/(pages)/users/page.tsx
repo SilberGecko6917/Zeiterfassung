@@ -9,10 +9,23 @@ import { UserDialog } from "@/components/admin/UserDialog";
 import { DeleteUserDialog } from "@/components/admin/DeleteUserDialog";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
 import { useRouter } from "next/navigation";
-import { User } from "@prisma/client"; // Import Prisma's User type
+import { User } from "@prisma/client";
+import { useSession } from "next-auth/react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+const ROLE_HIERARCHY: Record<string, number> = {
+  ADMIN: 3,
+  MANAGER: 2,
+  USER: 1,
+};
 
 export default function UsersPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const { users, isLoading, fetchUsers } = useAdminUsers();
   const [searchTerm, setSearchTerm] = useState("");
   const [userDialogOpen, setUserDialogOpen] = useState(false);
@@ -42,13 +55,67 @@ export default function UsersPage() {
     setUserDialogOpen(true);
   };
 
-  // User deletion handler
+  const canEditUser = (user: User): boolean => {
+    if (!session?.user?.id || !session?.user?.role) return false;
+    
+    const currentUserLevel = ROLE_HIERARCHY[session.user.role] || 0;
+    const targetUserLevel = ROLE_HIERARCHY[user.role] || 0;
+    
+    return targetUserLevel <= currentUserLevel;
+  };
+
+  const canDeleteUser = (user: User): boolean => {
+    if (!session?.user?.id || !session?.user?.role) return false;
+    if (user.id === session.user.id) return false;
+    if (users.length <= 1) return false;
+    
+    const currentUserLevel = ROLE_HIERARCHY[session.user.role] || 0;
+    const targetUserLevel = ROLE_HIERARCHY[user.role] || 0;
+    
+    return targetUserLevel < currentUserLevel;
+  };
+
+  const getEditTooltip = (user: User): string => {
+    if (!session?.user?.id || !session?.user?.role) {
+      return "Keine Berechtigung";
+    }
+    
+    const currentUserLevel = ROLE_HIERARCHY[session.user.role] || 0;
+    const targetUserLevel = ROLE_HIERARCHY[user.role] || 0;
+    
+    if (targetUserLevel > currentUserLevel) {
+      return "Sie können keine Benutzer mit höherer Rolle bearbeiten";
+    }
+    
+    return "Benutzer bearbeiten";
+  };
+
+  const getDeleteTooltip = (user: User): string => {
+    if (!session?.user?.id || !session?.user?.role) {
+      return "Keine Berechtigung";
+    }
+    if (user.id === session.user.id) {
+      return "Sie können Ihren eigenen Account nicht löschen";
+    }
+    if (users.length <= 1) {
+      return "Der letzte Account kann nicht gelöscht werden";
+    }
+    
+    const currentUserLevel = ROLE_HIERARCHY[session.user.role] || 0;
+    const targetUserLevel = ROLE_HIERARCHY[user.role] || 0;
+    
+    if (targetUserLevel >= currentUserLevel) {
+      return "Sie können keine Benutzer mit gleicher oder höherer Rolle löschen";
+    }
+    
+    return "Benutzer löschen";
+  };
+
   const handleDeletePrompt = (user: User) => {
     setSelectedUser(user);
     setDeleteDialogOpen(true);
   };
 
-  // View user activities
   const handleViewUserActivities = (
     userId: string,
     userName: string | null
@@ -164,24 +231,40 @@ export default function UsersPage() {
                             <Clock className="h-4 w-4" />
                             <span className="sr-only">Aktivitäten</span>
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleEditUser(user)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                            <span className="sr-only">Bearbeiten</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleDeletePrompt(user)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Löschen</span>
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleEditUser(user)}
+                                disabled={!canEditUser(user)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                                <span className="sr-only">Bearbeiten</span>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{getEditTooltip(user)}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleDeletePrompt(user)}
+                                disabled={!canDeleteUser(user)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                <span className="sr-only">Löschen</span>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{getDeleteTooltip(user)}</p>
+                            </TooltipContent>
+                          </Tooltip>
                         </div>
                       </td>
                     </tr>
