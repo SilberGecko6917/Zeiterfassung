@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import { IP } from "@/lib/server/auth-actions";
 import { LogAction, LogEntity } from "@/lib/enums";
+import { nowUTC, calculateDuration } from "@/lib/timezone";
+import { parseISO, subDays } from "date-fns";
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,10 +24,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse dates
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    const now = new Date();
+    // Parse dates - client must send ISO 8601 strings in UTC (e.g., "2024-06-01T12:00:00Z")
+    // The server expects UTC ISO strings and parses them as UTC
+    const start = parseISO(startTime);
+    const end = parseISO(endTime);
+    const now = nowUTC();
 
     // Prevent entries in the future
     if (start > now || end > now) {
@@ -36,8 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if entry is more than 7 days in the past
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(now.getDate() - 7);
+    const sevenDaysAgo = subDays(now, 7);
 
     if (start < sevenDaysAgo || end < sevenDaysAgo) {
       return NextResponse.json(
@@ -47,9 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate duration in seconds
-    const durationSeconds = Math.floor(
-      (end.getTime() - start.getTime()) / 1000
-    );
+    const durationSeconds = calculateDuration(start, end);
 
     if (durationSeconds <= 0) {
       return NextResponse.json(
@@ -89,6 +89,8 @@ export async function POST(request: NextRequest) {
       message: "Manual time entry created",
       timeEntry: {
         ...timeEntry,
+        startTime: timeEntry.startTime.toISOString(),
+        endTime: timeEntry.endTime?.toISOString(),
         duration: Number(timeEntry.duration),
       },
     });

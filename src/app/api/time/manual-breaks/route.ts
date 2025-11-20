@@ -4,6 +4,8 @@ import { LogAction, LogEntity } from "@/lib/enums";
 import { IP } from "@/lib/server/auth-actions";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getUserTimezone } from "@/lib/server/timezone";
+import { parseUserDateTimeToUTC, calculateDuration } from "@/lib/timezone";
 
 export async function POST(request: Request) {
   try {
@@ -14,6 +16,9 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const userId = session.user.id;
+
+    // Get user's timezone
+    const timezone = await getUserTimezone();
 
     // Get break data from request body
     const body = await request.json();
@@ -26,9 +31,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Parse times and calculate duration
-    const breakStartTime = new Date(`${date}T${startTime}`);
-    const breakEndTime = new Date(`${date}T${endTime}`);
+    // Parse times in user's timezone and convert to UTC for storage
+    const breakStartTime = parseUserDateTimeToUTC(date, startTime, timezone);
+    const breakEndTime = parseUserDateTimeToUTC(date, endTime, timezone);
     
     // Validate end time is after start time
     if (breakEndTime <= breakStartTime) {
@@ -38,11 +43,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const breakDurationSeconds = Math.floor(
-      (breakEndTime.getTime() - breakStartTime.getTime()) / 1000
-    );
+    const breakDurationSeconds = calculateDuration(breakStartTime, breakEndTime);
 
-    // Create the manual break entry
+    // Create the manual break entry (stored in UTC)
     const breakEntry = await prisma.trackedTime.create({
       data: {
         userId,
@@ -55,8 +58,10 @@ export async function POST(request: Request) {
 
     const breakEntryFormatted = {
       ...breakEntry,
-      duration: Number(breakDurationSeconds),
-    }
+      startTime: breakEntry.startTime.toISOString(),
+      endTime: breakEntry.endTime?.toISOString(),
+      duration: breakDurationSeconds,
+    };
 
     // Log this action
     await prisma.log.create({
@@ -68,7 +73,8 @@ export async function POST(request: Request) {
         details: JSON.stringify({
           breakStartTime: breakStartTime.toISOString(),
           breakEndTime: breakEndTime.toISOString(),
-          durationSeconds: breakDurationSeconds
+          durationSeconds: breakDurationSeconds,
+          timezone
         }),
         ipAddress: await IP(),
       },

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import { LogAction, LogEntity } from "@/lib/enums";
 import { IP } from "@/lib/server/auth-actions";
+import { nowUTC, calculateDuration } from "@/lib/timezone";
 
 export async function POST() {
   try {
@@ -28,12 +29,9 @@ export async function POST() {
       );
     }
 
-    // Calculate duration and update the session
-    const endTime = new Date();
-    const startTime = new Date(activeSession.startTime);
-    const durationSeconds = Number(
-      Math.floor((endTime.getTime() - startTime.getTime()) / 1000)
-    );
+    // Calculate duration and update the session - using UTC
+    const endTime = nowUTC();
+    const durationSeconds = calculateDuration(activeSession.startTime, endTime);
 
     const updatedSession = await prisma.trackedTime.update({
       where: { id: activeSession.id },
@@ -45,7 +43,9 @@ export async function POST() {
 
     const formattedSession = {
       ...updatedSession,
-      duration: durationSeconds,
+      startTime: updatedSession.startTime.toISOString(),
+      endTime: updatedSession.endTime?.toISOString(),
+      duration: Number(updatedSession.duration),
     };
 
     await prisma.log.create({
@@ -55,6 +55,8 @@ export async function POST() {
         entity: LogEntity.USER,
         details: JSON.stringify({
           message: "Time tracking stopped",
+          endTime: endTime.toISOString(),
+          duration: durationSeconds,
         }),
         ipAddress: await IP(),
       },

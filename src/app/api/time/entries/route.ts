@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
-import { startOfDay, endOfDay } from "date-fns";
+import { getUserTimezone } from "@/lib/server/timezone";
+import { startOfDayInTimezone, endOfDayInTimezone } from "@/lib/timezone";
+import { formatInTimeZone } from "date-fns-tz";
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,19 +14,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Get user's timezone
+    const timezone = await getUserTimezone();
+
     // Get date from query param
     const searchParams = request.nextUrl.searchParams;
     const dateParam = searchParams.get("date");
 
-    let date: Date;
+    let dateForQuery: Date | string;
     if (dateParam) {
-      date = new Date(dateParam);
+      dateForQuery = dateParam;
     } else {
-      date = new Date();
+      dateForQuery = new Date();
     }
 
-    const dayStart = startOfDay(date);
-    const dayEnd = endOfDay(date);
+    const dayStart = startOfDayInTimezone(dateForQuery, timezone);
+    const dayEnd = endOfDayInTimezone(dateForQuery, timezone);
 
     // Find entries that overlap with the specified date
     // This will include entries that:
@@ -70,41 +75,48 @@ export async function GET(request: NextRequest) {
     });
 
     // Add a field to indicate if the entry spans multiple days
+    // Convert to user's timezone for display
     const entriesWithMetadata = entries.map((entry) => {
-      const startDate = new Date(entry.startTime);
-      const endDate = new Date(entry.endTime as Date);
+      const startDateStr = formatInTimeZone(entry.startTime, timezone, 'yyyy-MM-dd');
+      const endDateStr = entry.endTime ? formatInTimeZone(entry.endTime, timezone, 'yyyy-MM-dd') : null;
 
-      const isMultiDay =
-        startDate.getDate() !== endDate.getDate() ||
-        startDate.getMonth() !== endDate.getMonth() ||
-        startDate.getFullYear() !== endDate.getFullYear();
+      let isMultiDay = false;
+      if (endDateStr) {
+        isMultiDay = startDateStr !== endDateStr;
+      }
 
       // Calculate the duration for just this day's portion
       let dayDuration = Number(entry.duration);
 
-      if (isMultiDay) {
-        // If entry starts before the current day, adjust the visual start time
-        const displayStart = startDate < dayStart ? dayStart : startDate;
-        // If entry ends after the current day, adjust the visual end time
-        const displayEnd = endDate > dayEnd ? dayEnd : endDate;
+      if (isMultiDay && entry.endTime) {
+
+        const displayStart = entry.startTime.getTime() < dayStart.getTime() ? dayStart : entry.startTime;
+        let displayEnd = entry.endTime;
+        if (entry.endTime) {
+          displayEnd = entry.endTime.getTime() > dayEnd.getTime() ? dayEnd : entry.endTime;
+        }
 
         // Calculate the visual duration for this day's part
-        const dayPortion = Math.floor(
-          (displayEnd.getTime() - displayStart.getTime()) / 1000
-        );
-        dayDuration = dayPortion;
+        if (displayEnd) {
+          const dayPortion = Math.floor(
+            (displayEnd.getTime() - displayStart.getTime()) / 1000
+          );
+          dayDuration = dayPortion;
+        }
       }
 
       const durationNumber = Number(entry.duration);
 
       return {
         ...entry,
+        startTime: entry.startTime.toISOString(),
+        endTime: entry.endTime?.toISOString(),
         duration: durationNumber,
         isMultiDay,
         dayDuration,
-        isStartDay: startDate >= dayStart && startDate <= dayEnd,
-        isEndDay: endDate >= dayStart && endDate <= dayEnd,
-        displayDate: date.toISOString().split("T")[0],
+        isStartDay: entry.startTime >= dayStart && entry.startTime <= dayEnd,
+        isEndDay: entry.endTime ? (entry.endTime >= dayStart && entry.endTime <= dayEnd) : false,
+        displayDate: typeof dateForQuery === 'string' ? dateForQuery : formatInTimeZone(dateForQuery, timezone, 'yyyy-MM-dd'),
       };
     });
 

@@ -1,27 +1,31 @@
 import { getSetting } from "@/lib/settings";
-import { format as dateFnsFormat } from "date-fns";
-import { de } from "date-fns/locale";
+import { getUserTimezone } from "@/lib/server/timezone";
+import { formatDateInTimezone, formatTimeInTimezone, formatDuration as formatDurationUtil } from "@/lib/timezone";
 
+/**
+ * Format a UTC date for display in user's timezone
+ * Uses server-side user timezone preference
+ */
 export async function formatDate(date: Date | string): Promise<string> {
   const dateFormat = await getSetting<string>("date_format");
-  const dateObj = typeof date === "string" ? new Date(date) : date;
-  return dateFnsFormat(dateObj, dateFormat, { locale: de });
+  const timezone = await getUserTimezone();
+  return formatDateInTimezone(date, timezone, dateFormat);
 }
 
+/**
+ * Format a UTC time for display in user's timezone
+ * Uses server-side user timezone preference
+ */
 export async function formatTime(date: Date | string): Promise<string> {
   const timeFormat = await getSetting<string>("time_format");
-  const dateObj = typeof date === "string" ? new Date(date) : date;
-  
-  if (timeFormat === "12h") {
-    return dateFnsFormat(dateObj, "hh:mm a", { locale: de });
-  }
-  
-  return dateFnsFormat(dateObj, "HH:mm", { locale: de });
+  const timezone = await getUserTimezone();
+  const use24Hour = timeFormat !== "12h";
+  return formatTimeInTimezone(date, timezone, use24Hour);
 }
 
+/**
+ * Format duration in seconds to HH:MM format
+ */
 export function formatDuration(durationInSeconds: number): string {
-  const hours = Math.floor(durationInSeconds / 3600);
-  const minutes = Math.floor((durationInSeconds % 3600) / 60);
-  
-  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  return formatDurationUtil(durationInSeconds);
 }
