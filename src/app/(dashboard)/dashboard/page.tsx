@@ -28,7 +28,7 @@ import { format, isSameDay, addDays } from "date-fns";
 import { toast } from "sonner";
 import { de } from "date-fns/locale";
 import { useTimezone } from "@/hooks/useTimezone";
-import { parseUserDateTimeToUTC, formatInUserTimezone, startOfDayInTimezone } from "@/lib/timezone-client";
+import { parseUserDateTimeToUTC, formatInUserTimezone, startOfDayInTimezone } from "@/lib/timezone";
 import {
   Dialog,
   DialogContent,
@@ -312,7 +312,7 @@ export default function Dashboard() {
       );
 
       // Validate date is within last 7 days
-      const today = startOfDayInTimezone(timezone);
+      const today = startOfDayInTimezone(new Date(), timezone);
       const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
 
       if (startDateTimeUTC < sevenDaysAgo) {

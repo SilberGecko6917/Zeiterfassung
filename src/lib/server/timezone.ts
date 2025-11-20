@@ -1,8 +1,3 @@
-/**
- * Server-side timezone utilities
- * Provides functions to get user timezone from session/database
- */
-
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';

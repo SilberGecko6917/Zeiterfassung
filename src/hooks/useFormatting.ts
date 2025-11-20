@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import { useSetting } from "@/hooks/useSettings";
 import { useTimezone } from "@/hooks/useTimezone";
-import { formatDateInTimezone, formatTimeInTimezone, formatDuration as formatDurationUtil } from "@/lib/timezone-client";
+import { formatDateInTimezone, formatTimeInTimezone, formatDuration as formatDurationUtil } from "@/lib/timezone";
 
 export function useFormatting() {
   const { value: dateFormat, loading: dateFormatLoading } = useSetting("date_format", "dd.MM.yyyy");

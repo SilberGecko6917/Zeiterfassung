@@ -86,18 +86,13 @@ export function parseUserDateTimeToUTC(
 
 /**
  * Get start of day in user's timezone, converted to UTC
- * @param date - Date to get start of day for (can be Date object or 'yyyy-MM-dd' string)
- * @param timezone - User's timezone
- * @returns UTC Date object representing start of day in user's timezone
  */
 export function startOfDayInTimezone(date: Date | string, timezone: string = 'UTC'): Date {
   let dateStr: string;
   
   if (typeof date === 'string') {
-    // If it's already a date string, use it directly
     dateStr = date;
   } else {
-    // If it's a Date object, format it to yyyy-MM-dd in the target timezone
     const zonedDate = toZonedTime(date, timezone);
     const year = zonedDate.getFullYear();
     const month = String(zonedDate.getMonth() + 1).padStart(2, '0');
@@ -105,28 +100,20 @@ export function startOfDayInTimezone(date: Date | string, timezone: string = 'UT
     dateStr = `${year}-${month}-${day}`;
   }
   
-  // Create a date string at midnight in the user's timezone
   const localMidnight = `${dateStr}T00:00:00`;
   const localDate = parseISO(localMidnight);
-  
-  // Convert this local midnight to UTC
   return fromZonedTime(localDate, timezone);
 }
 
 /**
  * Get end of day in user's timezone, converted to UTC
- * @param date - Date to get end of day for (can be Date object or 'yyyy-MM-dd' string)
- * @param timezone - User's timezone
- * @returns UTC Date object representing end of day in user's timezone
  */
 export function endOfDayInTimezone(date: Date | string, timezone: string = 'UTC'): Date {
   let dateStr: string;
   
   if (typeof date === 'string') {
-    // If it's already a date string, use it directly
     dateStr = date;
   } else {
-    // If it's a Date object, format it to yyyy-MM-dd in the target timezone
     const zonedDate = toZonedTime(date, timezone);
     const year = zonedDate.getFullYear();
     const month = String(zonedDate.getMonth() + 1).padStart(2, '0');
@@ -134,11 +121,8 @@ export function endOfDayInTimezone(date: Date | string, timezone: string = 'UTC'
     dateStr = `${year}-${month}-${day}`;
   }
   
-  // Create a date string at end of day in the user's timezone
   const localEndOfDay = `${dateStr}T23:59:59.999`;
   const localDate = parseISO(localEndOfDay);
-  
-  // Convert this local end of day to UTC
   return fromZonedTime(localDate, timezone);
 }
 
@@ -152,12 +136,27 @@ export function calculateDuration(startDate: Date | string, endDate: Date | stri
 }
 
 /**
- * Format duration in seconds to human readable format (HH:MM)
+ * Format duration in seconds to HH:MM
  */
 export function formatDuration(durationInSeconds: number): string {
   const hours = Math.floor(durationInSeconds / 3600);
   const minutes = Math.floor((durationInSeconds % 3600) / 60);
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Get timezone offset string (e.g., '+01:00')
+ */
+export function getTimezoneOffset(timezone: string, date: Date = new Date()): string {
+  return formatInTimeZone(date, timezone, 'xxx', { locale: de });
+}
+
+/**
+ * Get timezone display name
+ */
+export function getTimezoneDisplayName(timezone: string): string {
+  const offset = getTimezoneOffset(timezone);
+  return `${timezone} (UTC${offset})`;
 }
 
 /**
@@ -181,19 +180,4 @@ export function formatTimeInTimezone(
 ): string {
   const formatStr = use24Hour ? 'HH:mm' : 'hh:mm a';
   return formatInUserTimezone(date, formatStr, timezone);
-}
-
-/**
- * Get timezone offset string (e.g., '+01:00', '-05:00')
- */
-export function getTimezoneOffset(timezone: string, date: Date = new Date()): string {
-  return formatInTimeZone(date, timezone, 'xxx', { locale: de });
-}
-
-/**
- * Get timezone display name
- */
-export function getTimezoneDisplayName(timezone: string): string {
-  const offset = getTimezoneOffset(timezone);
-  return `${timezone} (UTC${offset})`;
 }

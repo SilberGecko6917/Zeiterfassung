@@ -7,7 +7,7 @@ import { Calendar, ChevronRight, Clock, PieChart, Users } from "lucide-react";
 import Link from "next/link";
 import { useAdminDashboard } from "@/hooks/useAdminDashboard";
 import { useFormatting } from "@/hooks/useFormatting";
-import { formatDuration } from "@/lib/timezone-client";
+import { formatDuration } from "@/lib/timezone";
 
 export default function AdminHomePage() {
   const { stats, users, timeEntries, isLoading, fetchData } = useAdminDashboard();

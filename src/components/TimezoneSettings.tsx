@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { getTimezoneDisplayName } from "@/lib/timezone-client";
+import { getTimezoneDisplayName } from "@/lib/timezone";
 import { SUPPORTED_TIMEZONES } from "@/lib/timezone";
 
 export function TimezoneSettings() {
