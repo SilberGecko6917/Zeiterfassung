@@ -10,9 +10,9 @@ import {
 } from 'date-fns-tz';
 import { parseISO } from 'date-fns';
 import { de, type Locale } from 'date-fns/locale';
-import { SUPPORTED_TIMEZONES } from './timezone';
+import { SUPPORTED_TIMEZONES, type SupportedTimezone } from './timezone-constants';
 
-export type SupportedTimezone = typeof SUPPORTED_TIMEZONES[number];
+export { SUPPORTED_TIMEZONES, type SupportedTimezone };
 
 /**
  * Validates if a timezone string is supported
@@ -69,11 +69,6 @@ export function formatInUserTimezone(
 }
 
 
-function zonedTimeToUtc(dateStr: string, timezone: string): Date {
-  const localDate = parseISO(dateStr);
-  return fromZonedTime(localDate, timezone);
-}
-
 /**
  * Parse a date string from user input in their timezone and convert to UTC
  * @param dateStr - Date string in format 'yyyy-MM-dd'
@@ -86,13 +81,9 @@ export function parseUserDateTimeToUTC(
   timeStr: string,
   timezone: string = 'UTC'
 ): Date {
-  // Create date string in user's timezone
   const localDateTimeStr = `${dateStr}T${timeStr}:00`;
-
-  // Parse and convert to UTC using the correct timezone context
-  const utcDate = zonedTimeToUtc(localDateTimeStr, timezone);
-
-  return utcDate;
+  const localDate = parseISO(localDateTimeStr);
+  return fromZonedTime(localDate, timezone);
 }
 
 /**
@@ -154,6 +145,24 @@ export function endOfDayInTimezone(date: Date | string, timezone: string = 'UTC'
 }
 
 /**
+ * Calculate duration between two dates in seconds
+ */
+export function calculateDuration(startDate: Date | string, endDate: Date | string): number {
+  const start = typeof startDate === 'string' ? parseISO(startDate) : startDate;
+  const end = typeof endDate === 'string' ? parseISO(endDate) : endDate;
+  return Math.floor((end.getTime() - start.getTime()) / 1000);
+}
+
+/**
+ * Format duration in seconds to human readable format (HH:MM)
+ */
+export function formatDuration(durationInSeconds: number): string {
+  const hours = Math.floor(durationInSeconds / 3600);
+  const minutes = Math.floor((durationInSeconds % 3600) / 60);
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+}
+
+/**
  * Format date for display
  */
 export function formatDateInTimezone(
@@ -177,24 +186,10 @@ export function formatTimeInTimezone(
 }
 
 /**
- * Format date and time for display
- */
-export function formatDateTimeInTimezone(
-  date: Date | string,
-  timezone: string = 'UTC',
-  dateFormat: string = 'dd.MM.yyyy',
-  use24Hour: boolean = true
-): string {
-  const timeFormat = use24Hour ? 'HH:mm' : 'hh:mm a';
-  return formatInUserTimezone(date, `${dateFormat} ${timeFormat}`, timezone);
-}
-
-/**
  * Get timezone offset string (e.g., '+01:00', '-05:00')
  */
 export function getTimezoneOffset(timezone: string, date: Date = new Date()): string {
-  const formatted = formatInTimeZone(date, timezone, 'xxx', { locale: de });
-  return formatted;
+  return formatInTimeZone(date, timezone, 'xxx', { locale: de });
 }
 
 /**
@@ -205,20 +200,4 @@ export function getTimezoneDisplayName(timezone: string): string {
   return `${timezone} (UTC${offset})`;
 }
 
-/**
- * Calculate duration between two dates in seconds
- */
-export function calculateDuration(startDate: Date | string, endDate: Date | string): number {
-  const start = typeof startDate === 'string' ? parseISO(startDate) : startDate;
-  const end = typeof endDate === 'string' ? parseISO(endDate) : endDate;
-  return Math.floor((end.getTime() - start.getTime()) / 1000);
-}
 
-/**
- * Format duration in seconds to human readable format (HH:MM)
- */
-export function formatDuration(durationInSeconds: number): string {
-  const hours = Math.floor(durationInSeconds / 3600);
-  const minutes = Math.floor((durationInSeconds % 3600) / 60);
-  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-}

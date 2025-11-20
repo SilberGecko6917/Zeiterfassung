@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { LogAction, LogEntity } from "@/lib/enums";
 import { IP } from "@/lib/server/auth-actions";
 import { nowUTC, calculateDuration } from "@/lib/timezone";
+import { formatTimeEntryResponse } from "@/lib/format-time-entry";
 
 export async function POST() {
   try {
@@ -41,12 +42,7 @@ export async function POST() {
       },
     });
 
-    const formattedSession = {
-      ...updatedSession,
-      startTime: updatedSession.startTime.toISOString(),
-      endTime: updatedSession.endTime?.toISOString(),
-      duration: Number(updatedSession.duration),
-    };
+    const formattedSession = formatTimeEntryResponse(updatedSession);
 
     await prisma.log.create({
       data: {

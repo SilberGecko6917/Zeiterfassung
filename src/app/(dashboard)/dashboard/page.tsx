@@ -28,7 +28,7 @@ import { format, isSameDay, addDays } from "date-fns";
 import { toast } from "sonner";
 import { de } from "date-fns/locale";
 import { useTimezone } from "@/hooks/useTimezone";
-import { parseUserDateTimeToUTC, formatInUserTimezone } from "@/lib/timezone-client";
+import { parseUserDateTimeToUTC, formatInUserTimezone, startOfDayInTimezone } from "@/lib/timezone-client";
 import {
   Dialog,
   DialogContent,
@@ -280,10 +280,10 @@ export default function Dashboard() {
     setEditingEntry(entry);
 
     setNewEntryForm({
-      startDate: formatInUserTimezone(entry.startTime, "yyyy-MM-dd", timezone, de),
-      startTime: formatInUserTimezone(entry.startTime, "HH:mm", timezone, de),
-      endDate: formatInUserTimezone(entry.endTime, "yyyy-MM-dd", timezone, de),
-      endTime: formatInUserTimezone(entry.endTime, "HH:mm", timezone, de),
+      startDate: formatInUserTimezone(entry.startTime, "yyyy-MM-dd", timezone),
+      startTime: formatInUserTimezone(entry.startTime, "HH:mm", timezone),
+      endDate: formatInUserTimezone(entry.endTime, "yyyy-MM-dd", timezone),
+      endTime: formatInUserTimezone(entry.endTime, "HH:mm", timezone),
     });
     
     setEditDialogOpen(true);
@@ -312,9 +312,8 @@ export default function Dashboard() {
       );
 
       // Validate date is within last 7 days
-      const now = new Date();
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(now.getDate() - 7);
+      const today = startOfDayInTimezone(timezone);
+      const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
 
       if (startDateTimeUTC < sevenDaysAgo) {
         throw new Error(

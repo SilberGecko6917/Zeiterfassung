@@ -89,20 +89,14 @@ export async function GET(request: NextRequest) {
       let dayDuration = Number(entry.duration);
 
       if (isMultiDay && entry.endTime) {
-
         const displayStart = entry.startTime.getTime() < dayStart.getTime() ? dayStart : entry.startTime;
-        let displayEnd = entry.endTime;
-        if (entry.endTime) {
-          displayEnd = entry.endTime.getTime() > dayEnd.getTime() ? dayEnd : entry.endTime;
-        }
+        const displayEnd = entry.endTime.getTime() > dayEnd.getTime() ? dayEnd : entry.endTime;
 
         // Calculate the visual duration for this day's part
-        if (displayEnd) {
-          const dayPortion = Math.floor(
-            (displayEnd.getTime() - displayStart.getTime()) / 1000
-          );
-          dayDuration = dayPortion;
-        }
+        const dayPortion = Math.floor(
+          (displayEnd.getTime() - displayStart.getTime()) / 1000
+        );
+        dayDuration = dayPortion;
       }
 
       const durationNumber = Number(entry.duration);
