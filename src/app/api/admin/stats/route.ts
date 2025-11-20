@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkIsAdmin, checkPermission } from "@/lib/server/auth-actions";
-import { startOfDay, endOfDay, startOfWeek, addDays } from "date-fns";
+import { startOfWeek, addDays } from "date-fns";
+import { getUserTimezone } from "@/lib/server/timezone";
+import { startOfDayInTimezone, endOfDayInTimezone, nowUTC, fromUTC } from "@/lib/timezone";
 
 export async function GET() {
   try {
@@ -13,13 +15,18 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    // Get today's date boundaries
-    const today = new Date();
-    const startToday = startOfDay(today);
-    const endToday = endOfDay(today);
+    // Get user timezone
+    const timezone = await getUserTimezone();
+    const today = nowUTC();
+    
+    // Get today's date boundaries in user's timezone, converted to UTC
+    const startToday = startOfDayInTimezone(today, timezone);
+    const endToday = endOfDayInTimezone(today, timezone);
 
-    // Get start of current week
-    const startWeek = startOfWeek(today, { weekStartsOn: 1 }); // Monday as week start
+    // Get start of current week in user's timezone
+    const todayUserTZ = fromUTC(today, timezone);
+    const startWeekUserTZ = startOfWeek(todayUserTZ, { weekStartsOn: 1 }); // Monday as week start
+    const startWeek = startOfDayInTimezone(startWeekUserTZ, timezone);
 
     // Count total users
     const totalUsers = await prisma.user.count();
@@ -95,7 +102,7 @@ export async function GET() {
     const weeklyHours = weeklySeconds / 3600;
 
     // Find upcoming vacations for the next 30 days
-    const thirtyDaysFromNow = addDays(today, 30);
+    const thirtyDaysFromNow = addDays(todayUserTZ, 30);
     const upcomingVacations = await prisma.vacation.findMany({
       where: {
         status: "approved",
@@ -103,7 +110,7 @@ export async function GET() {
           lte: thirtyDaysFromNow,
         },
         endDate: {
-          gte: today,
+          gte: todayUserTZ,
         },
       },
       include: {

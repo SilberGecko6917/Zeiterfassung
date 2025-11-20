@@ -1,40 +1,41 @@
 "use client";
 
 import { useCallback } from "react";
-import { format } from "date-fns";
-import { de } from "date-fns/locale";
 import { useSetting } from "@/hooks/useSettings";
+import { useTimezone } from "@/hooks/useTimezone";
+import { formatDateInTimezone, formatTimeInTimezone, formatDuration as formatDurationUtil } from "@/lib/timezone";
 
 export function useFormatting() {
   const { value: dateFormat, loading: dateFormatLoading } = useSetting("date_format", "dd.MM.yyyy");
   const { value: timeFormat, loading: timeFormatLoading } = useSetting("time_format", "24h");
+  const { timezone, loading: timezoneLoading } = useTimezone();
   
   const formatDate = useCallback((date: Date | string | null | undefined) => {
     if (!date) return "";
     try {
-      const dateObj = typeof date === "string" ? new Date(date) : date;
-      return format(dateObj, dateFormat as string, { locale: de });
+      return formatDateInTimezone(date, timezone, dateFormat as string);
     } catch (error) {
       console.error("Error formatting date:", error);
-      return new Date(date).toLocaleDateString();
+      return "Invalid Date";
     }
-  }, [dateFormat]);
+  }, [dateFormat, timezone]);
   
   const formatTime = useCallback((time: Date | string | null | undefined) => {
     if (!time) return "";
     try {
-      const timeObj = typeof time === "string" ? new Date(time) : time;
-      if (timeFormat === "12h") {
-        return format(timeObj, "hh:mm a", { locale: de });
-      }
-      return format(timeObj, "HH:mm", { locale: de });
+      const use24Hour = timeFormat !== "12h";
+      return formatTimeInTimezone(time, timezone, use24Hour);
     } catch (error) {
       console.error("Error formatting time:", error);
-      return new Date(time).toLocaleTimeString();
+      return "Invalid Time";
     }
-  }, [timeFormat]);
+  }, [timeFormat, timezone]);
   
-  const isLoading = dateFormatLoading || timeFormatLoading;
+  const formatDuration = useCallback((durationInSeconds: number) => {
+    return formatDurationUtil(durationInSeconds);
+  }, []);
   
-  return { formatDate, formatTime, isLoading };
+  const isLoading = dateFormatLoading || timeFormatLoading || timezoneLoading;
+  
+  return { formatDate, formatTime, formatDuration, isLoading };
 }

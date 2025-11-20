@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import { LogAction, LogEntity } from "@/lib/enums";
 import { IP } from "@/lib/server/auth-actions";
+import { nowUTC } from "@/lib/timezone";
 
 export async function POST() {
   try {
@@ -28,8 +29,8 @@ export async function POST() {
       );
     }
 
-    // Start new tracking session
-    const startTime = new Date();
+    // Start new tracking session - store in UTC
+    const startTime = nowUTC();
 
     await prisma.trackedTime.create({
       data: {
@@ -47,7 +48,7 @@ export async function POST() {
         entity: LogEntity.TIME_ENTRY,
         details: JSON.stringify({
           message: "Time tracking started",
-          startTime,
+          startTime: startTime.toISOString(),
           user: {
             id: session.user.id,
             name: session.user.name,
@@ -61,7 +62,7 @@ export async function POST() {
 
     return NextResponse.json({
       message: "Time tracking started",
-      startTime,
+      startTime: startTime.toISOString(),
     });
   } catch (error) {
     console.error("Error starting time tracking:", error);

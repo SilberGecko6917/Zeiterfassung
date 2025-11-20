@@ -20,11 +20,15 @@ import {
   Trash,
   Plus,
   CalendarPlus,
+  Settings,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { format, isSameDay, addDays } from "date-fns";
 import { toast } from "sonner";
 import { de } from "date-fns/locale";
+import { useTimezone } from "@/hooks/useTimezone";
+import { parseUserDateTimeToUTC, formatInUserTimezone, startOfDayInTimezone } from "@/lib/timezone";
 import {
   Dialog,
   DialogContent,
@@ -68,6 +72,8 @@ const isWithinLastSevenDays = (dateToCheck: Date): boolean => {
 
 export default function Dashboard() {
   const { data: session } = useSession();
+  const router = useRouter();
+  const { timezone } = useTimezone();
   const [date, setDate] = useState<Date>(new Date());
   const [isTracking, setIsTracking] = useState(false);
   const [trackingStart, setTrackingStart] = useState<Date | null>(null);
@@ -262,7 +268,6 @@ export default function Dashboard() {
   // Open edit dialog for a time entry
   const handleEditEntry = (entry: TimeEntry) => {
     const startDate = new Date(entry.startTime);
-    const endDate = new Date(entry.endTime);
 
     // Check if the entry is within the last 7 days
     if (!isWithinLastSevenDays(startDate)) {
@@ -275,10 +280,10 @@ export default function Dashboard() {
     setEditingEntry(entry);
 
     setNewEntryForm({
-      startDate: format(startDate, "yyyy-MM-dd"),
-      startTime: format(startDate, "HH:mm"),
-      endDate: format(endDate, "yyyy-MM-dd"),
-      endTime: format(endDate, "HH:mm"),
+      startDate: formatInUserTimezone(entry.startTime, "yyyy-MM-dd", timezone),
+      startTime: formatInUserTimezone(entry.startTime, "HH:mm", timezone),
+      endDate: formatInUserTimezone(entry.endTime, "yyyy-MM-dd", timezone),
+      endTime: formatInUserTimezone(entry.endTime, "HH:mm", timezone),
     });
     
     setEditDialogOpen(true);
@@ -294,23 +299,30 @@ export default function Dashboard() {
         throw new Error("Alle Felder müssen ausgefüllt sein");
       }
 
-      // Create datetime objects
-      const startDateTime = new Date(`${newEntryForm.startDate}T${newEntryForm.startTime}:00`);
-      const endDateTime = new Date(`${newEntryForm.endDate}T${newEntryForm.endTime}:00`);
+      // Convert user's date/time input to UTC using their timezone preference
+      const startDateTimeUTC = parseUserDateTimeToUTC(
+        newEntryForm.startDate,
+        newEntryForm.startTime,
+        timezone
+      );
+      const endDateTimeUTC = parseUserDateTimeToUTC(
+        newEntryForm.endDate,
+        newEntryForm.endTime,
+        timezone
+      );
 
       // Validate date is within last 7 days
-      const now = new Date();
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(now.getDate() - 7);
+      const today = startOfDayInTimezone(new Date(), timezone);
+      const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-      if (startDateTime < sevenDaysAgo) {
+      if (startDateTimeUTC < sevenDaysAgo) {
         throw new Error(
           "Zeiteinträge können nur innerhalb der letzten 7 Tage gesetzt werden"
         );
       }
 
       // Validate end is after start
-      if (endDateTime <= startDateTime) {
+      if (endDateTimeUTC <= startDateTimeUTC) {
         throw new Error("Endzeit muss nach der Startzeit liegen");
       }
 
@@ -320,8 +332,8 @@ export default function Dashboard() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          startTime: startDateTime.toISOString(),
-          endTime: endDateTime.toISOString(),
+          startTime: startDateTimeUTC.toISOString(),
+          endTime: endDateTimeUTC.toISOString(),
         }),
       });
 
@@ -377,9 +389,17 @@ export default function Dashboard() {
     try {
       setIsLoading(true);
 
-      // Create full datetime strings
-      const startDateTime = `${newEntryForm.startDate}T${newEntryForm.startTime}:00`;
-      const endDateTime = `${newEntryForm.endDate}T${newEntryForm.endTime}:00`;
+      // Convert user's date/time input to UTC using their timezone preference
+      const startDateUTC = parseUserDateTimeToUTC(
+        newEntryForm.startDate,
+        newEntryForm.startTime,
+        timezone
+      );
+      const endDateUTC = parseUserDateTimeToUTC(
+        newEntryForm.endDate,
+        newEntryForm.endTime,
+        timezone
+      );
 
       const response = await fetch("/api/time/manual-entry", {
         method: "POST",
@@ -387,8 +407,8 @@ export default function Dashboard() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          startTime: startDateTime,
-          endTime: endDateTime,
+          startTime: startDateUTC.toISOString(),
+          endTime: endDateUTC.toISOString(),
         }),
       });
 
@@ -522,7 +542,18 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-7xl mx-auto pt-16 mb-6">
-      <h1 className="text-3xl font-bold mb-8">Zeiterfassung</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold">Zeiterfassung</h1>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => router.push('/dashboard/settings')}
+          className="flex items-center gap-2"
+        >
+          <Settings className="h-4 w-4" />
+          Einstellungen
+        </Button>
+      </div>
         
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Time Tracking Card */}
@@ -696,22 +727,24 @@ export default function Dashboard() {
                           }`}
                         >
                           <td className="py-3 px-4">
-                            {format(
-                              new Date(entry.startTime),
-                              entry.isMultiDay && !entry.isStartDay
-                                ? "'Vorheriger Tag'"
-                                : "HH:mm",
-                              { locale: de }
-                            )}
+                            {entry.isMultiDay && !entry.isStartDay
+                              ? "Vorheriger Tag"
+                              : formatInUserTimezone(
+                                  entry.startTime,
+                                  "HH:mm",
+                                  timezone,
+                                  de
+                                )}
                           </td>
                           <td className="py-3 px-4">
-                            {format(
-                              new Date(entry.endTime),
-                              entry.isMultiDay && !entry.isEndDay
-                                ? "'Nächster Tag'"
-                                : "HH:mm",
-                              { locale: de }
-                            )}
+                            {entry.isMultiDay && !entry.isEndDay
+                              ? "Nächster Tag"
+                              : formatInUserTimezone(
+                                  entry.endTime,
+                                  "HH:mm",
+                                  timezone,
+                                  de
+                                )}
                           </td>
                           <td className="py-3 px-4">
                             {formatTime(
@@ -1285,20 +1318,22 @@ export default function Dashboard() {
                 <div className="grid grid-cols-3 gap-2 mb-1">
                   <span className="font-medium">Start:</span>
                   <span className="col-span-2">
-                    {format(
-                      new Date(entryToDelete.startTime),
+                    {formatInUserTimezone(
+                      entryToDelete.startTime,
                       "dd.MM.yyyy HH:mm",
-                      { locale: de }
+                      timezone,
+                      de
                     )}
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-2 mb-1">
                   <span className="font-medium">Ende:</span>
                   <span className="col-span-2">
-                    {format(
-                      new Date(entryToDelete.endTime),
+                    {formatInUserTimezone(
+                      entryToDelete.endTime,
                       "dd.MM.yyyy HH:mm",
-                      { locale: de }
+                      timezone,
+                      de
                     )}
                   </span>
                 </div>
