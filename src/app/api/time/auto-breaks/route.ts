@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { startOfDay, endOfDay } from "date-fns";
 import { LogAction, LogEntity } from "@/lib/enums";
 import { checkIsAdmin, IP } from "@/lib/server/auth-actions";
+import { startOfDayInTimezone, endOfDayInTimezone } from "@/lib/timezone";
 
 export async function POST(request: Request) {
   try {
@@ -36,9 +36,6 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const targetDate = body.date ? new Date(body.date) : new Date();
 
-    const dayStart = startOfDay(targetDate);
-    const dayEnd = endOfDay(targetDate);
-
     // Get all users with break settings
     const usersWithBreakSettings = await prisma.user.findMany({
       include: {
@@ -54,12 +51,17 @@ export async function POST(request: Request) {
         continue;
       }
 
+      // Use user's timezone for day boundaries
+      const userTimezone = user.timezone || 'UTC';
+      const dayStart = startOfDayInTimezone(targetDate, userTimezone);
+      const dayEnd = endOfDayInTimezone(targetDate, userTimezone);
+
       // Get all tracked time entries for the user for the target day
       const timeEntries = await prisma.trackedTime.findMany({
         where: {
           userId: user.id,
           startTime: { gte: dayStart },
-          endTime: { lte: dayEnd },
+          endTime: { lte: dayEnd, not: null },
           isBreak: false, // Exclude existing breaks
         },
         orderBy: {
@@ -67,16 +69,8 @@ export async function POST(request: Request) {
         },
       });
 
-      // Skip if no time entries or more than one time entry
-      if (timeEntries.length !== 1) {
-        continue;
-      }
-
-      // Get the single time entry
-      const singleEntry = timeEntries[0];
-      
-      // Skip if there's no end time
-      if (!singleEntry.endTime) {
+      // Skip if no time entries
+      if (timeEntries.length === 0) {
         continue;
       }
 
@@ -94,73 +88,115 @@ export async function POST(request: Request) {
         continue;
       }
 
-      // Calculate break time based on the single entry
-      const entryStartMs = new Date(singleEntry.startTime).getTime();
-      const entryEndMs = new Date(singleEntry.endTime).getTime();
-      const entryDurationMs = entryEndMs - entryStartMs;
-      const entryMiddleMs = entryStartMs + entryDurationMs / 2;
+      // Find earliest start and latest end across all entries
+      const firstWithEndTime = timeEntries.find(entry => entry.endTime !== null && entry.endTime !== undefined);
+      if (!firstWithEndTime) {
+        // Defensive: skip if no entry has a non-null endTime
+        continue;
+      }
+      let earliestStart = firstWithEndTime.startTime;
+      let latestEnd = firstWithEndTime.endTime as Date;
+
+      for (const entry of timeEntries) {
+        if (entry.startTime < earliestStart) earliestStart = entry.startTime;
+        if (entry.endTime && entry.endTime > latestEnd) latestEnd = entry.endTime;
+      }
+
+      // Calculate break time - place it in the middle of the work period
+      const workStartMs = earliestStart.getTime();
+      const workEndMs = latestEnd.getTime();
+      const workSpanMs = workEndMs - workStartMs;
+      const workMiddleMs = workStartMs + workSpanMs / 2;
 
       // Calculate break times
       const breakDurationMs = user.breakSettings.breakDuration * 60 * 1000;
-      const breakStartTime = new Date(entryMiddleMs - breakDurationMs / 2);
-      const breakEndTime = new Date(entryMiddleMs + breakDurationMs / 2);
-      const breakDurationSeconds = user.breakSettings.breakDuration * 60;
+      const breakStartTime = new Date(workMiddleMs - breakDurationMs / 2);
+      const breakEndTime = new Date(workMiddleMs + breakDurationMs / 2);
 
-      // Check if break times are within the entry timeframe
-      if (
-        breakStartTime < singleEntry.startTime ||
-        breakEndTime > singleEntry.endTime
-      ) {
+      // Validate break fits within work period
+      if (breakStartTime < earliestStart || breakEndTime > latestEnd) {
+        console.warn(
+          `Break doesn't fit for user ${user.name}: work ${earliestStart.toISOString()} - ${latestEnd.toISOString()}, break would be ${breakStartTime.toISOString()} - ${breakEndTime.toISOString()}`
+        );
         continue;
       }
 
-      // Calculate durations for the two parts
-      const firstHalfDurationSeconds = Math.floor(
-        (breakStartTime.getTime() - entryStartMs) / 1000
-      );
-      const secondHalfDurationSeconds = Math.floor(
-        (entryEndMs - breakEndTime.getTime()) / 1000
-      );
-
-      // Delete the original entry
-      await prisma.trackedTime.delete({
+      // Delete all original entries
+      await prisma.trackedTime.deleteMany({
         where: {
-          id: singleEntry.id,
+          id: { in: timeEntries.map(e => e.id) },
         },
       });
 
-      // Create first half entry
-      await prisma.trackedTime.create({
-        data: {
-          userId: user.id,
-          startTime: singleEntry.startTime,
-          endTime: breakStartTime,
-          duration: BigInt(firstHalfDurationSeconds),
-          isBreak: false,
-        },
-      });
+      // Reconstruct work periods with break in the middle
+      // Find all periods and split them at break boundaries
+      const reconstructedPeriods: Array<{ start: Date; end: Date; isBreak: boolean }> = [];
+      
+      for (const entry of timeEntries) {
+        const entryStart = entry.startTime;
+        const entryEnd = entry.endTime!;
 
-      // Insert the break
-      const breakEntry = await prisma.trackedTime.create({
-        data: {
-          userId: user.id,
-          startTime: breakStartTime,
-          endTime: breakEndTime,
-          duration: BigInt(breakDurationSeconds),
-          isBreak: true,
-        },
-      });
+        // Entry is completely before break
+        if (entryEnd <= breakStartTime) {
+          reconstructedPeriods.push({ start: entryStart, end: entryEnd, isBreak: false });
+        }
+        // Entry is completely after break
+        else if (entryStart >= breakEndTime) {
+          reconstructedPeriods.push({ start: entryStart, end: entryEnd, isBreak: false });
+        }
+        // Entry spans break start
+        else if (entryStart < breakStartTime && entryEnd > breakStartTime) {
+          // Add part before break
+          reconstructedPeriods.push({ start: entryStart, end: breakStartTime, isBreak: false });
+          
+          // If entry also spans break end, add part after break
+          if (entryEnd > breakEndTime) {
+            reconstructedPeriods.push({ start: breakEndTime, end: entryEnd, isBreak: false });
+          }
+        }
+        // Entry starts during break
+        else if (entryStart >= breakStartTime && entryStart < breakEndTime) {
+          // Only add part after break if any
+          if (entryEnd > breakEndTime) {
+            reconstructedPeriods.push({ start: breakEndTime, end: entryEnd, isBreak: false });
+          }
+        }
+      }
 
-      // Create second half entry
-      await prisma.trackedTime.create({
-        data: {
-          userId: user.id,
-          startTime: breakEndTime,
-          endTime: singleEntry.endTime,
-          duration: BigInt(secondHalfDurationSeconds),
-          isBreak: false,
-        },
-      });
+      // Add the break
+      reconstructedPeriods.push({ start: breakStartTime, end: breakEndTime, isBreak: true });
+
+      // Sort by start time
+      reconstructedPeriods.sort((a, b) => a.start.getTime() - b.start.getTime());
+
+      // Create all new entries from sorted array
+      let breakEntry: Awaited<ReturnType<typeof prisma.trackedTime.create>> | null = null;
+      for (const period of reconstructedPeriods) {
+        const durationSeconds = Math.floor(
+          (period.end.getTime() - period.start.getTime()) / 1000
+        );
+        
+        const entry = await prisma.trackedTime.create({
+          data: {
+            userId: user.id,
+            startTime: period.start,
+            endTime: period.end,
+            duration: BigInt(durationSeconds),
+            isBreak: period.isBreak,
+          },
+        });
+
+        // Keep reference to break entry for logging
+        if (period.isBreak) {
+          breakEntry = entry;
+        }
+      }
+
+      // Ensure we have a break entry (should always be true)
+      if (!breakEntry) {
+        console.error(`No break entry created for user ${user.name}`);
+        continue;
+      }
 
       // Log this action
       await prisma.log.create({
@@ -173,6 +209,8 @@ export async function POST(request: Request) {
             breakDuration: user.breakSettings.breakDuration,
             breakStartTime: breakStartTime.toISOString(),
             breakEndTime: breakEndTime.toISOString(),
+            originalEntriesCount: timeEntries.length,
+            timezone: userTimezone,
           }),
           ipAddress: await IP(),
         },
@@ -185,6 +223,7 @@ export async function POST(request: Request) {
         breakStartTime: breakStartTime,
         breakEndTime: breakEndTime,
         breakDuration: user.breakSettings.breakDuration,
+        entriesProcessed: timeEntries.length,
       });
     }
 
