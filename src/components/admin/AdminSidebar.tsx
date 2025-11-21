@@ -1,4 +1,4 @@
-import { Calendar, ClipboardList, Coffee, Download, FileText, Info, LayoutDashboard, LogOut, Menu, Settings, Users } from "lucide-react";
+import { Calendar, ClipboardList, Coffee, Download, FileText, Info, LayoutDashboard, LogOut, Menu, Settings, Users, BarChart3 } from "lucide-react";
 import { Button } from "../ui/button";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -117,6 +117,19 @@ export default function Sidebar() {
                                 </button>
                             </li>
                         )}
+                        <li>
+                            <button
+                                onClick={() => handleNavigation("weekly-summary")}
+                                className={`flex items-center w-full px-4 py-3 rounded-md text-sm font-medium transition-colors ${
+                                    isActive("weekly-summary")
+                                        ? "bg-primary text-primary-foreground"
+                                        : "hover:bg-muted"
+                                }`}
+                            >
+                                <BarChart3 className="mr-3 h-5 w-5" />
+                                KW-Summen
+                            </button>
+                        </li>
                         <li>
                             <button
                                 onClick={() => handleNavigation("activities")}
@@ -278,6 +291,19 @@ export default function Sidebar() {
                                             </button>
                                         </li>
                                     )}
+                                    <li>
+                                        <button
+                                            onClick={() => handleNavigation("weekly-summary")}
+                                            className={`flex items-center w-full px-4 py-3 rounded-md text-sm font-medium transition-colors ${
+                                                isActive("weekly-summary")
+                                                    ? "bg-primary text-primary-foreground"
+                                                    : "hover:bg-muted"
+                                            }`}
+                                        >
+                                            <BarChart3 className="mr-3 h-5 w-5" />
+                                            KW-Summen
+                                        </button>
+                                    </li>
                                     <li>
                                         <button
                                             onClick={() => handleNavigation("activities")}

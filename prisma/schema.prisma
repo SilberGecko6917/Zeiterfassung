@@ -14,6 +14,8 @@ model User {
   password String
   role     String   @default("USER")
   timezone String   @default("Europe/Berlin")
+  showWeeklySummary Boolean  @default(true)
+  weeklyTargetHours Float    @default(40.0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

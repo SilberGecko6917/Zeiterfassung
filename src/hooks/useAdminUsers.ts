@@ -8,6 +8,8 @@ type CreateUserData = {
   email: string;
   password: string;
   role: "USER" | "ADMIN" | "MANAGER";
+  showWeeklySummary?: boolean;
+  weeklyTargetHours?: number;
 };
 
 type UpdateUserData = {
@@ -15,6 +17,8 @@ type UpdateUserData = {
   email?: string;
   password?: string;
   role?: "USER" | "ADMIN" | "MANAGER";
+  showWeeklySummary?: boolean;
+  weeklyTargetHours?: number;
 };
 
 export function useAdminUsers() {

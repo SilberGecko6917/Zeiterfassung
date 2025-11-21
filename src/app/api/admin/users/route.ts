@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, email, password, role } = body;
+    const { name, email, password, role, showWeeklySummary, weeklyTargetHours } = body;
 
     // Validate input
     if (!name || !email || !password) {
@@ -74,13 +74,15 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Create user with weekly summary settings
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
         role: role || "USER",
+        showWeeklySummary: typeof showWeeklySummary === "boolean" ? showWeeklySummary : true,
+        weeklyTargetHours: typeof weeklyTargetHours === "number" && weeklyTargetHours >= 0 ? weeklyTargetHours : 40.0,
       },
     });
 
