@@ -26,7 +26,7 @@ export async function PATCH(
 
     const userId = (await params).id;
     const body = await request.json();
-    const { name, email, password, role } = body;
+    const { name, email, password, role, showWeeklySummary, weeklyTargetHours } = body;
 
     if (!name || !email) {
       return NextResponse.json(
@@ -85,6 +85,14 @@ export async function PATCH(
 
     if (password && password.trim() !== "") {
       updateData.password = await bcrypt.hash(password, 10);
+    }
+
+    // Update weekly summary settings if provided
+    if (typeof showWeeklySummary === "boolean") {
+      updateData.showWeeklySummary = showWeeklySummary;
+    }
+    if (typeof weeklyTargetHours === "number" && weeklyTargetHours >= 0) {
+      updateData.weeklyTargetHours = weeklyTargetHours;
     }
 
     const user = await prisma.user.update({

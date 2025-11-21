@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { User } from "@prisma/client";
 
 interface UserDialogProps {
@@ -34,6 +35,8 @@ interface UserFormData {
   email: string;
   password: string;
   role: UserRole;
+  showWeeklySummary: boolean;
+  weeklyTargetHours: number;
 }
 
 export function UserDialog({ open, onOpenChange, user, onSaved }: UserDialogProps) {
@@ -43,7 +46,9 @@ export function UserDialog({ open, onOpenChange, user, onSaved }: UserDialogProp
     name: "",
     email: "",
     password: "",
-    role: "USER"
+    role: "USER",
+    showWeeklySummary: true,
+    weeklyTargetHours: 40.0
   });
 
   // Reset form when dialog opens/closes or user changes
@@ -53,14 +58,18 @@ export function UserDialog({ open, onOpenChange, user, onSaved }: UserDialogProp
         name: user.name ?? "",
         email: user.email ?? "",
         password: "", // Don't prefill password
-        role: user.role as UserRole
+        role: user.role as UserRole,
+        showWeeklySummary: user.showWeeklySummary ?? true,
+        weeklyTargetHours: user.weeklyTargetHours ?? 40.0
       });
     } else {
       setFormData({
         name: "",
         email: "",
         password: "",
-        role: "USER"
+        role: "USER",
+        showWeeklySummary: true,
+        weeklyTargetHours: 40.0
       });
     }
   }, [user, open]);
@@ -92,10 +101,14 @@ export function UserDialog({ open, onOpenChange, user, onSaved }: UserDialogProp
           email: string;
           password?: string;
           role: UserRole;
+          showWeeklySummary: boolean;
+          weeklyTargetHours: number;
         } = {
           name: formData.name,
           email: formData.email,
-          role: formData.role
+          role: formData.role,
+          showWeeklySummary: formData.showWeeklySummary,
+          weeklyTargetHours: formData.weeklyTargetHours
         };
         
         // Only include password if it's not empty
@@ -110,7 +123,9 @@ export function UserDialog({ open, onOpenChange, user, onSaved }: UserDialogProp
           name: formData.name,
           email: formData.email,
           password: formData.password,
-          role: formData.role
+          role: formData.role,
+          showWeeklySummary: formData.showWeeklySummary,
+          weeklyTargetHours: formData.weeklyTargetHours
         });
       }
       onOpenChange(false);
@@ -179,6 +194,34 @@ export function UserDialog({ open, onOpenChange, user, onSaved }: UserDialogProp
                   <SelectItem value="ADMIN">Administrator</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="weeklyTargetHours">Soll-Stunden pro Woche</Label>
+              <Input
+                id="weeklyTargetHours"
+                name="weeklyTargetHours"
+                type="number"
+                min="0"
+                max="168"
+                step="0.5"
+                value={formData.weeklyTargetHours}
+                onChange={(e) => setFormData(prev => ({ ...prev, weeklyTargetHours: parseFloat(e.target.value) || 0 }))}
+                required
+              />
+              <p className="text-xs text-muted-foreground">Standard: 40 Stunden pro Woche</p>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="showWeeklySummary">Wochensumme anzeigen</Label>
+                <p className="text-xs text-muted-foreground">
+                  Zeigt KW-Summe im Admin-Dashboard an
+                </p>
+              </div>
+              <Switch
+                id="showWeeklySummary"
+                checked={formData.showWeeklySummary}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, showWeeklySummary: checked }))}
+              />
             </div>
           </div>
           <DialogFooter>

@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useAdminDashboard } from "@/hooks/useAdminDashboard";
 import { useFormatting } from "@/hooks/useFormatting";
 import { formatDuration } from "@/lib/timezone";
+import { WeeklySummary } from "@/components/admin/WeeklySummary";
 
 export default function AdminHomePage() {
   const { stats, users, timeEntries, isLoading, fetchData } = useAdminDashboard();
@@ -124,6 +125,9 @@ export default function AdminHomePage() {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Weekly Summary - KW-Summen-Anzeige */}
+      <WeeklySummary />
 
       {/* Recent Activities */}
       <Card>

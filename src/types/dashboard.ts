@@ -67,3 +67,24 @@ export interface LogEntry {
   ip?: string;
   userAgent?: string;
 }
+
+export interface UserWeeklySummary {
+  userId: string;
+  userName: string;
+  email: string;
+  weekNumber: number;
+  year: number;
+  actualHours: number;
+  targetHours: number;
+  difference: number;
+  percentage: number;
+  showWeeklySummary: boolean;
+}
+
+export interface WeekInfo {
+  number: number;
+  year: number;
+  start: string;
+  end: string;
+  label: string;
+}
