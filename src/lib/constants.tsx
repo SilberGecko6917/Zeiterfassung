@@ -1,6 +1,6 @@
 export const PROJECT_NAME = "Zeiterfassung";
 export const PROJECT_DESCRIPTION = "Zeiterfassung";
-export const VERSION = "1.5.3";
+export const VERSION = "1.5.4";
 
 export enum Role {
   ADMIN = "ADMIN",
