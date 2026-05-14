@@ -1,6 +1,79 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "config:recommended",
+    ":dependencyDashboard"
+  ],
+
+  "labels": ["dependencies"],
+  "rangeStrategy": "bump",
+
+  "lockFileMaintenance": {
+    "enabled": true
+  },
+
+  "packageRules": [
+    {
+      "groupName": "production dependencies",
+      "matchDepTypes": ["dependencies"],
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "groupName": "development dependencies",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+
+    {
+      "groupName": "nextjs",
+      "matchPackageNames": [
+        "next",
+        "eslint-config-next"
+      ]
+    },
+
+    {
+      "groupName": "react",
+      "matchPackageNames": [
+        "react",
+        "react-dom",
+        "@types/react",
+        "@types/react-dom"
+      ]
+    },
+
+    {
+      "groupName": "prisma",
+      "matchPackageNames": [
+        "prisma",
+        "@prisma/client",
+        "@auth/prisma-adapter"
+      ]
+    },
+
+    {
+      "groupName": "radix-ui",
+      "matchPackageNames": [
+        "/^@radix-ui\\//"
+      ]
+    },
+
+    {
+      "groupName": "tailwind",
+      "matchPackageNames": [
+        "tailwindcss",
+        "@tailwindcss/postcss",
+        "tailwind-merge",
+        "tw-animate-css"
+      ]
+    },
+
+    {
+      "groupName": "typescript-eslint",
+      "matchPackageNames": [
+        "@typescript-eslint/eslint-plugin",
+        "@typescript-eslint/parser"
+      ]
+    }
   ]
 }
