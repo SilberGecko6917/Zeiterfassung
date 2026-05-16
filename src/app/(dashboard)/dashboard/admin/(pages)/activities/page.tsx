@@ -316,7 +316,6 @@ export default function ActivitiesPage() {
                         mode="single"
                         selected={customStartDate}
                         onSelect={setCustomStartDate}
-                        initialFocus
                         disabled={(date) => date > new Date()}
                       />
                     </PopoverContent>
@@ -345,7 +344,6 @@ export default function ActivitiesPage() {
                         mode="single"
                         selected={customEndDate}
                         onSelect={setCustomEndDate}
-                        initialFocus
                         disabled={(date) => (customStartDate && date < customStartDate) || date > new Date()}
                       />
                     </PopoverContent>
