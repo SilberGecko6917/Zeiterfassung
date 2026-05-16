@@ -26,7 +26,7 @@ const apiPermissionMap: Record<string, string> = {
   "/api/admin/permissions": "manage_settings",
 };
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const installCookie = request.cookies.get("installation-complete")?.value;
