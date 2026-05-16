@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User } from "@prisma/client";
+import { type User } from "@prisma/client";
 
 interface VacationRequest {
   id: string;

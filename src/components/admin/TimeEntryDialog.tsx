@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAdminActivities, TimeEntryWithUser } from "@/hooks/useAdminActivities";
+import { useAdminActivities, type TimeEntryWithUser } from "@/hooks/useAdminActivities";
 import { format } from "date-fns";
 
 interface TimeEntryDialogProps {

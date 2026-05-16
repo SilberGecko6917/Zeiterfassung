@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { User } from "@prisma/client";
+import { type User } from "@prisma/client";
 
 export default function ExportPage() {
   const [users, setUsers] = useState<User[]>([]);

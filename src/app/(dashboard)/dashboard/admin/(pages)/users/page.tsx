@@ -9,7 +9,7 @@ import { UserDialog } from "@/components/admin/UserDialog";
 import { DeleteUserDialog } from "@/components/admin/DeleteUserDialog";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
 import { useRouter } from "next/navigation";
-import { User } from "@prisma/client";
+import { type User } from "@prisma/client";
 import { useSession } from "next-auth/react";
 import {
   Tooltip,

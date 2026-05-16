@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { saveSetting, getAllSettings, settingsDefinitions } from "@/lib/settings";
 import { checkIsAdmin } from "@/lib/server/auth-actions";
 

@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { User } from "@prisma/client"; // Import Prisma's User type instead of custom UserData
+import { type User } from "@prisma/client"; // Import Prisma's User type instead of custom UserData
 
 interface CreateTimeEntryDialogProps {
   open: boolean;

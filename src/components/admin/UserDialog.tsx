@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { User } from "@prisma/client";
+import { type User } from "@prisma/client";
 
 interface UserDialogProps {
   open: boolean;

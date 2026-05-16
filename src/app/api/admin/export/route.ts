@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { formatDate, formatTime } from "@/lib/format-utils";
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";

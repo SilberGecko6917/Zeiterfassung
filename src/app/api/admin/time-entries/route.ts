@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkIsAdmin, checkPermission, IP } from "@/lib/server/auth-actions";
 import { format, parseISO, subDays } from "date-fns";

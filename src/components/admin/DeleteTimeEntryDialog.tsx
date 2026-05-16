@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { useAdminActivities, TimeEntryWithUser } from "@/hooks/useAdminActivities";
+import { useAdminActivities, type TimeEntryWithUser } from "@/hooks/useAdminActivities";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
 
 interface DeleteTimeEntryDialogProps {

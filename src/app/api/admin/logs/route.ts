@@ -1,6 +1,6 @@
 import { checkIsAdmin } from "@/lib/server/auth-actions";
 import { endOfDay, startOfDay, subDays } from "date-fns";
-import { NextRequest } from "next/server";
+import { type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserById } from "@/lib/server/user-service";
 
