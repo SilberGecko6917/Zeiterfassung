@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { GitHubRelease, APP_VERSION, isUpdateAvailable } from "@/lib/version";
+import { type GitHubRelease, APP_VERSION, isUpdateAvailable } from "@/lib/version";
 import { Bell, ExternalLink, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 

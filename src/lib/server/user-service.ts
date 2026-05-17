@@ -1,4 +1,4 @@
-import { UserData } from "@/types/dashboard";
+import { type UserData } from "@/types/dashboard";
 import { prisma } from "../prisma";
 
 /**

@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { Settings as RefreshCw, Building, FileText, Globe, Clock, ShieldUser, Save } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { SettingDefinition } from "@/lib/settings";
+import { type SettingDefinition } from "@/lib/settings";
 import { PermissionManager } from "@/components/admin/PermissionManager";
 
 interface Setting extends SettingDefinition {
@@ -189,7 +189,11 @@ export default function SettingsPage() {
 
   // Load settings on component mount
   useEffect(() => {
-    fetchSettings();
+    const timer = setTimeout(() => {
+      void fetchSettings();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   if (isLoading && settings.length === 0) {

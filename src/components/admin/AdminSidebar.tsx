@@ -41,16 +41,24 @@ export default function Sidebar() {
 
     useEffect(() => {
         if (session?.user) {
-            fetchPendingVacations();
+            const timer = setTimeout(() => {
+                void fetchPendingVacations();
+            }, 0);
             const interval = setInterval(fetchPendingVacations, 60000);
-            return () => clearInterval(interval);
+            return () => {
+                clearTimeout(timer);
+                clearInterval(interval);
+            };
         }
     }, [session]);
 
     // Refresh when pathname changes
     useEffect(() => {
         if (session?.user) {
-            fetchPendingVacations();
+            const timer = setTimeout(() => {
+                void fetchPendingVacations();
+            }, 0);
+            return () => clearTimeout(timer);
         }
     }, [pathname, session]);
 

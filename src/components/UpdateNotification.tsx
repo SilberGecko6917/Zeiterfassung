@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GitHubRelease, isUpdateAvailable, APP_VERSION } from "@/lib/version";
+import { type GitHubRelease, isUpdateAvailable, APP_VERSION } from "@/lib/version";
 import {
   Dialog,
   DialogContent,

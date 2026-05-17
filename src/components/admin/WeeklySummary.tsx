@@ -72,7 +72,11 @@ export function WeeklySummary({ userId }: WeeklySummaryProps) {
   };
 
   useEffect(() => {
-    fetchWeeklySummary();
+    const timer = setTimeout(() => {
+      void fetchWeeklySummary();
+    }, 0);
+
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentDate, userId]);
 

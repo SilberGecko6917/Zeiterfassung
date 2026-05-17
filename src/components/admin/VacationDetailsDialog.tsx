@@ -12,7 +12,7 @@ import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { useState } from "react";
 import { useAdminVacations } from "@/hooks/useAdminVacations";
-import { VacationData } from "@/types/dashboard";
+import { type VacationData } from "@/types/dashboard";
 
 interface VacationDetailsDialogProps {
   open: boolean;

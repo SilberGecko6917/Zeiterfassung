@@ -22,7 +22,7 @@ import {
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
   useAdminActivities,
-  TimeEntryWithUser,
+  type TimeEntryWithUser,
 } from "@/hooks/useAdminActivities";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
 import { TimeEntryDialog } from "@/components/admin/TimeEntryDialog";

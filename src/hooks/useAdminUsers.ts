@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { User } from '@prisma/client';
+import { type User } from '@prisma/client';
 
 // Define types for operations
 type CreateUserData = {

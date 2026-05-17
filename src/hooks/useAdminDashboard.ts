@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { TrackedTime, User } from '@prisma/client'
-import { DashboardStats } from '@/types/dashboard';
+import { type TrackedTime, type User } from '@prisma/client'
+import { type DashboardStats } from '@/types/dashboard';
 
 export function useAdminDashboard() {
   const [stats, setStats] = useState<DashboardStats>({

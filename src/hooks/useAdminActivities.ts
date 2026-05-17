@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { format, subDays } from 'date-fns';
-import { TrackedTime, User } from '@prisma/client';
+import { type TrackedTime, type User } from '@prisma/client';
 
 // Extended type that includes user info
 export interface TimeEntryWithUser extends TrackedTime {

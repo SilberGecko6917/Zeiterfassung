@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { format, isSameDay, addDays } from "date-fns";
+import { format, isSameDay, addDays, addHours } from "date-fns";
 import { toast } from "sonner";
 import { de } from "date-fns/locale";
 import { useTimezone } from "@/hooks/useTimezone";
@@ -91,7 +91,7 @@ export default function Dashboard() {
     startDate: format(new Date(), "yyyy-MM-dd"),
     startTime: format(new Date(), "HH:mm"),
     endDate: format(new Date(), "yyyy-MM-dd"),
-    endTime: format(new Date(Date.now() + 60 * 60 * 1000), "HH:mm"),
+    endTime: format(addHours(new Date(), 1), "HH:mm"),
   });
 
   // State for deleting time entries
@@ -539,6 +539,69 @@ export default function Dashboard() {
       // Only add to total if it's not a break entry
       return entry.isBreak ? total : total + entry.duration;
     }, 0) + (isTracking ? elapsedTime : 0);
+
+  const getDurationPreview = (
+    startDate: string,
+    startTime: string,
+    endDate: string,
+    endTime: string
+  ) => {
+    const start = new Date(`${startDate}T${startTime}:00`);
+    const end = new Date(`${endDate}T${endTime}:00`);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return null;
+    }
+
+    return Math.floor((end.getTime() - start.getTime()) / 1000);
+  };
+
+  const editDurationPreview =
+    newEntryForm.startDate &&
+    newEntryForm.startTime &&
+    newEntryForm.endDate &&
+    newEntryForm.endTime
+      ? getDurationPreview(
+          newEntryForm.startDate,
+          newEntryForm.startTime,
+          newEntryForm.endDate,
+          newEntryForm.endTime
+        )
+      : null;
+
+  const createDurationPreview =
+    newEntryForm.startDate &&
+    newEntryForm.startTime &&
+    newEntryForm.endDate &&
+    newEntryForm.endTime
+      ? getDurationPreview(
+          newEntryForm.startDate,
+          newEntryForm.startTime,
+          newEntryForm.endDate,
+          newEntryForm.endTime
+        )
+      : null;
+
+  const vacationDaysPreview = (() => {
+    const start = new Date(vacationForm.startDate);
+    const end = new Date(vacationForm.endDate);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return null;
+    }
+
+    let days = 0;
+    const current = new Date(start);
+    while (current <= end) {
+      const dayOfWeek = current.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        days++;
+      }
+      current.setDate(current.getDate() + 1);
+    }
+
+    return days;
+  })();
 
   return (
     <div className="max-w-7xl mx-auto pt-16 mb-6">
@@ -1090,42 +1153,24 @@ export default function Dashboard() {
             </div>
 
             {/* Calculate and show duration */}
-            {newEntryForm.startDate &&
-              newEntryForm.startTime &&
-              newEntryForm.endDate &&
-              newEntryForm.endTime &&
-              (() => {
-                try {
-                  const start = new Date(
-                    `${newEntryForm.startDate}T${newEntryForm.startTime}:00`
-                  );
-                  const end = new Date(
-                    `${newEntryForm.endDate}T${newEntryForm.endTime}:00`
-                  );
-                  const duration = Math.floor(
-                    (end.getTime() - start.getTime()) / 1000
-                  );
-
-                  return (
-                    <div className="bg-muted rounded-md p-4">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">Berechnete Dauer:</span>
-                        <span
-                          className={`font-mono ${
-                            duration < 0
-                              ? "text-destructive"
-                              : "text-green-600 dark:text-green-400"
-                          }`}
-                        >
-                          {duration < 0 ? "Ungültig" : formatTime(duration)}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                } catch {
-                  return null;
-                }
-              })()}
+            {editDurationPreview !== null && (
+              <div className="bg-muted rounded-md p-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">Berechnete Dauer:</span>
+                  <span
+                    className={`font-mono ${
+                      editDurationPreview < 0
+                        ? "text-destructive"
+                        : "text-green-600 dark:text-green-400"
+                    }`}
+                  >
+                    {editDurationPreview < 0
+                      ? "Ungültig"
+                      : formatTime(editDurationPreview)}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter className="sm:justify-between">
             <Button
@@ -1236,42 +1281,24 @@ export default function Dashboard() {
             </div>
 
             {/* Calculate and show duration */}
-            {newEntryForm.startDate &&
-              newEntryForm.startTime &&
-              newEntryForm.endDate &&
-              newEntryForm.endTime &&
-              (() => {
-                try {
-                  const start = new Date(
-                    `${newEntryForm.startDate}T${newEntryForm.startTime}:00`
-                  );
-                  const end = new Date(
-                    `${newEntryForm.endDate}T${newEntryForm.endTime}:00`
-                  );
-                  const duration = Math.floor(
-                    (end.getTime() - start.getTime()) / 1000
-                  );
-
-                  return (
-                    <div className="bg-muted rounded-md p-4">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">Berechnete Dauer:</span>
-                        <span
-                          className={`font-mono ${
-                            duration < 0
-                              ? "text-destructive"
-                              : "text-green-600 dark:text-green-400"
-                          }`}
-                        >
-                          {duration < 0 ? "Ungültig" : formatTime(duration)}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                } catch {
-                  return null;
-                }
-              })()}
+            {createDurationPreview !== null && (
+              <div className="bg-muted rounded-md p-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">Berechnete Dauer:</span>
+                  <span
+                    className={`font-mono ${
+                      createDurationPreview < 0
+                        ? "text-destructive"
+                        : "text-green-600 dark:text-green-400"
+                    }`}
+                  >
+                    {createDurationPreview < 0
+                      ? "Ungültig"
+                      : formatTime(createDurationPreview)}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter className="sm:justify-between">
             <Button
@@ -1432,54 +1459,34 @@ export default function Dashboard() {
             </div>
 
             {/* Calculate Vacation days */}
-            {(() => {
-              try {
-                const start = new Date(vacationForm.startDate);
-                const end = new Date(vacationForm.endDate);
-
-                // Calculate the number of days between start & end (Mo-Fr)
-                let days = 0;
-                const current = new Date(start);
-                while (current <= end) {
-                  const dayOfWeek = current.getDay();
-                  if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-                    days++;
-                  }
-                  current.setDate(current.getDate() + 1);
-                }
-
-                return (
-                  <div className="bg-muted rounded-md p-4">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium">Urlaubstage (Mo-Fr):</span>
-                      <span
-                        className={`font-mono ${
-                          days <= 0
-                            ? "text-destructive"
-                            : days <= vacationStats.remainingDays
-                            ? "text-green-600 dark:text-green-400"
-                            : "text-amber-600 dark:text-amber-400"
-                        }`}
-                      >
-                        {days <= 0
-                          ? "Ungültiger Zeitraum"
-                          : days === 1
-                          ? "1 Tag"
-                          : `${days} Tage`}
-                      </span>
-                    </div>
-                    {days > vacationStats.remainingDays && (
-                      <div className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-                        Warnung: Der Antrag überschreitet Ihre verbleibenden
-                        Urlaubstage ({vacationStats.remainingDays}).
-                      </div>
-                    )}
+            {vacationDaysPreview !== null && (
+              <div className="bg-muted rounded-md p-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">Urlaubstage (Mo-Fr):</span>
+                  <span
+                    className={`font-mono ${
+                      vacationDaysPreview <= 0
+                        ? "text-destructive"
+                        : vacationDaysPreview <= vacationStats.remainingDays
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-amber-600 dark:text-amber-400"
+                    }`}
+                  >
+                    {vacationDaysPreview <= 0
+                      ? "Ungültiger Zeitraum"
+                      : vacationDaysPreview === 1
+                      ? "1 Tag"
+                      : `${vacationDaysPreview} Tage`}
+                  </span>
+                </div>
+                {vacationDaysPreview > vacationStats.remainingDays && (
+                  <div className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+                    Warnung: Der Antrag überschreitet Ihre verbleibenden
+                    Urlaubstage ({vacationStats.remainingDays}).
                   </div>
-                );
-              } catch {
-                return null;
-              }
-            })()}
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter className="sm:justify-between">
             <Button

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { VacationData } from '@/types/dashboard';
+import { type VacationData } from '@/types/dashboard';
 
 export function useAdminVacations() {
   const [vacations, setVacations] = useState<VacationData[]>([]);

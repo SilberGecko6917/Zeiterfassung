@@ -59,13 +59,6 @@ export function PermissionManager() {
   const userRole = session?.user?.role || "USER";
   const userRoleLevel = roleHierarchy[userRole as keyof typeof roleHierarchy] || roleHierarchy.ADMIN;
 
-  // Log session info to help debug
-  useEffect(() => {
-    console.log("Session:", session);
-    console.log("User role:", userRole);
-    console.log("User role level:", userRoleLevel);
-  }, [session, userRole, userRoleLevel]);
-
   // Fetch current permissions
   useEffect(() => {
     const fetchPermissions = async () => {

@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAdminActivities, TimeEntryWithUser } from "@/hooks/useAdminActivities";
+import { useAdminActivities, type TimeEntryWithUser } from "@/hooks/useAdminActivities";
 import { format } from "date-fns";
 
 interface TimeEntryDialogProps {
@@ -42,19 +42,27 @@ export function TimeEntryDialog({ open, onOpenChange, entry, onSaved }: TimeEntr
       const startDate = new Date(entry.startTime);
       const endDate = entry.endTime ? new Date(entry.endTime) : new Date();
 
-      setFormData({
-        startDate: format(startDate, "yyyy-MM-dd"),
-        startTime: format(startDate, "HH:mm"),
-        endDate: format(endDate, "yyyy-MM-dd"),
-        endTime: format(endDate, "HH:mm"),
-      });
+      const timer = setTimeout(() => {
+        setFormData({
+          startDate: format(startDate, "yyyy-MM-dd"),
+          startTime: format(startDate, "HH:mm"),
+          endDate: format(endDate, "yyyy-MM-dd"),
+          endTime: format(endDate, "HH:mm"),
+        });
+      }, 0);
+
+      return () => clearTimeout(timer);
     } else {
-      setFormData({
-        startDate: "",
-        startTime: "",
-        endDate: "",
-        endTime: "",
-      });
+      const timer = setTimeout(() => {
+        setFormData({
+          startDate: "",
+          startTime: "",
+          endDate: "",
+          endTime: "",
+        });
+      }, 0);
+
+      return () => clearTimeout(timer);
     }
   }, [entry, open]);
 

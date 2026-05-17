@@ -60,7 +60,11 @@ export default function LogsPage() {
 
   // Load logs on component mount
   useEffect(() => {
-    fetchLogs();
+    const timer = setTimeout(() => {
+      void fetchLogs();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const handleViewLogDetails = (log: LogEntry) => {

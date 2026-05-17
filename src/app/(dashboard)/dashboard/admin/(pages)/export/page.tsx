@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { User } from "@prisma/client";
+import { type User } from "@prisma/client";
 
 export default function ExportPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -49,7 +49,11 @@ export default function ExportPage() {
 
   // Load users on component mount
   useEffect(() => {
-    fetchUsers();
+    const timer = setTimeout(() => {
+      void fetchUsers();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [fetchUsers]);
 
   // Export Function

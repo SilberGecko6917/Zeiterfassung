@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { User, Coffee, Save, Clock } from "lucide-react";
-import { User as UserType } from "@prisma/client";
+import { type User as UserType } from "@prisma/client";
 
 interface BreakSetting {
   userId: string;
@@ -95,7 +95,11 @@ export default function BreaksPage() {
 
   // Load break settings on component mount
   useEffect(() => {
-    fetchBreakSettings();
+    const timer = setTimeout(() => {
+      void fetchBreakSettings();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   if (isLoading && usersWithBreakSettings.length === 0) {

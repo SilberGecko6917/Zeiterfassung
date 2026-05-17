@@ -10,7 +10,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
-import { User } from "@prisma/client";
+import { type User } from "@prisma/client";
 
 interface DeleteUserDialogProps {
   open: boolean;

@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
-import { Session } from "next-auth";
+import { type Session } from "next-auth";
 import { twMerge } from "tailwind-merge";
-import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import { type AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

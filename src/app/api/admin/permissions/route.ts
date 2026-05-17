@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { IP, getSession } from "@/lib/server/auth-actions";
 import { LogAction, LogEntity } from "@/lib/enums";
 import { prisma } from "@/lib/prisma";
