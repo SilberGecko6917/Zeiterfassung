@@ -35,17 +35,24 @@ interface TimeEntryFormData {
   endTime: string;
 }
 
+const createDefaultFormData = (): TimeEntryFormData => {
+  const now = new Date();
+  const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+
+  return {
+    userId: "",
+    startDate: format(now, "yyyy-MM-dd"),
+    startTime: format(now, "HH:mm"),
+    endDate: format(oneHourLater, "yyyy-MM-dd"),
+    endTime: format(oneHourLater, "HH:mm"),
+  };
+};
+
 export function CreateTimeEntryDialog({ open, onOpenChange, onCreated }: CreateTimeEntryDialogProps) {
   const { createTimeEntry } = useAdminActivities();
   const { users, fetchUsers } = useAdminUsers();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState<TimeEntryFormData>({
-    userId: "",
-    startDate: format(new Date(), "yyyy-MM-dd"),
-    startTime: format(new Date(), "HH:mm"),
-    endDate: format(new Date(), "yyyy-MM-dd"),
-    endTime: format(new Date(Date.now() + 60 * 60 * 1000), "HH:mm"),
-  });
+  const [formData, setFormData] = useState<TimeEntryFormData>(createDefaultFormData);
 
   // Fetch users when dialog opens
   useEffect(() => {
@@ -57,13 +64,11 @@ export function CreateTimeEntryDialog({ open, onOpenChange, onCreated }: CreateT
   // Reset form when dialog opens/closes
   useEffect(() => {
     if (open) {
-      setFormData({
-        userId: "",
-        startDate: format(new Date(), "yyyy-MM-dd"),
-        startTime: format(new Date(), "HH:mm"),
-        endDate: format(new Date(), "yyyy-MM-dd"),
-        endTime: format(new Date(Date.now() + 60 * 60 * 1000), "HH:mm"),
-      });
+      const timer = setTimeout(() => {
+        setFormData(createDefaultFormData());
+      }, 0);
+
+      return () => clearTimeout(timer);
     }
   }, [open]);
 

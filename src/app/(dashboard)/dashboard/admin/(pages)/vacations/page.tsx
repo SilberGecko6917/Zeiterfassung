@@ -75,8 +75,6 @@ export default function VacationsPage() {
       const response = await fetch("/api/admin/vacation");
       const data = await response.json();
 
-      console.log("API Response:", data); // Debug logging
-
       // Transform the data to match expected format
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const transformedVacations = data.vacations.map((vacation: any) => ({
@@ -119,8 +117,12 @@ export default function VacationsPage() {
 
   // Load data on component mount
   useEffect(() => {
-    fetchVacations();
-    fetchUsers();
+    const timer = setTimeout(() => {
+      void fetchVacations();
+      void fetchUsers();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [fetchVacations, fetchUsers]);
 
   // Approve vacation - use existing PUT endpoint

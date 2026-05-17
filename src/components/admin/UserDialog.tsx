@@ -54,23 +54,31 @@ export function UserDialog({ open, onOpenChange, user, onSaved }: UserDialogProp
   // Reset form when dialog opens/closes or user changes
   useEffect(() => {
     if (user) {
-      setFormData({
-        name: user.name ?? "",
-        email: user.email ?? "",
-        password: "", // Don't prefill password
-        role: user.role as UserRole,
-        showWeeklySummary: user.showWeeklySummary ?? true,
-        weeklyTargetHours: user.weeklyTargetHours ?? 40.0
-      });
+      const timer = setTimeout(() => {
+        setFormData({
+          name: user.name ?? "",
+          email: user.email ?? "",
+          password: "", // Don't prefill password
+          role: user.role as UserRole,
+          showWeeklySummary: user.showWeeklySummary ?? true,
+          weeklyTargetHours: user.weeklyTargetHours ?? 40.0
+        });
+      }, 0);
+
+      return () => clearTimeout(timer);
     } else {
-      setFormData({
-        name: "",
-        email: "",
-        password: "",
-        role: "USER",
-        showWeeklySummary: true,
-        weeklyTargetHours: 40.0
-      });
+      const timer = setTimeout(() => {
+        setFormData({
+          name: "",
+          email: "",
+          password: "",
+          role: "USER",
+          showWeeklySummary: true,
+          weeklyTargetHours: 40.0
+        });
+      }, 0);
+
+      return () => clearTimeout(timer);
     }
   }, [user, open]);
 

@@ -189,7 +189,11 @@ export default function SettingsPage() {
 
   // Load settings on component mount
   useEffect(() => {
-    fetchSettings();
+    const timer = setTimeout(() => {
+      void fetchSettings();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   if (isLoading && settings.length === 0) {

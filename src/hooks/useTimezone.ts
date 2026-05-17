@@ -26,7 +26,11 @@ export function useTimezone() {
   }, [session]);
 
   useEffect(() => {
-    fetchTimezone();
+    const timer = setTimeout(() => {
+      void fetchTimezone();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [fetchTimezone]);
 
   return { timezone, loading };

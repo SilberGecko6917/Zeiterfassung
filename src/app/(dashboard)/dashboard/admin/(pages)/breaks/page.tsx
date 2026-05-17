@@ -95,7 +95,11 @@ export default function BreaksPage() {
 
   // Load break settings on component mount
   useEffect(() => {
-    fetchBreakSettings();
+    const timer = setTimeout(() => {
+      void fetchBreakSettings();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   if (isLoading && usersWithBreakSettings.length === 0) {

@@ -30,7 +30,11 @@ export function TimezoneSettings() {
   }, []);
 
   useEffect(() => {
-    fetchTimezone();
+    const timer = setTimeout(() => {
+      void fetchTimezone();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [fetchTimezone]);
 
   const handleSave = async () => {

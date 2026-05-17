@@ -49,7 +49,11 @@ export default function ExportPage() {
 
   // Load users on component mount
   useEffect(() => {
-    fetchUsers();
+    const timer = setTimeout(() => {
+      void fetchUsers();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [fetchUsers]);
 
   // Export Function

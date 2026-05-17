@@ -28,13 +28,10 @@ export function DateTimePicker24h({
   className,
   id
 }: DateTimePicker24hProps) {
-  const [date, setDate] = React.useState<Date | undefined>(value);
+  const [internalDate, setInternalDate] = React.useState<Date | undefined>(value);
   const [isOpen, setIsOpen] = React.useState(false);
- 
-  // Update internal state when value prop changes
-  React.useEffect(() => {
-    setDate(value);
-  }, [value]);
+
+  const date = value ?? internalDate;
 
   const hours = Array.from({ length: 24 }, (_, i) => i);
   const minutes = Array.from({ length: 12 }, (_, i) => i * 5);
@@ -45,8 +42,8 @@ export function DateTimePicker24h({
       if (date) {
         selectedDate.setHours(date.getHours(), date.getMinutes());
       }
-      
-      setDate(selectedDate);
+
+      setInternalDate(selectedDate);
       onChange?.(selectedDate);
     }
   };
@@ -62,7 +59,7 @@ export function DateTimePicker24h({
       } else if (type === "minute") {
         newDate.setMinutes(parseInt(value));
       }
-      setDate(newDate);
+      setInternalDate(newDate);
       onChange?.(newDate);
     } else {
       // If no date is selected, use today with the selected time
@@ -72,7 +69,7 @@ export function DateTimePicker24h({
       } else if (type === "minute") {
         newDate.setMinutes(parseInt(value));
       }
-      setDate(newDate);
+      setInternalDate(newDate);
       onChange?.(newDate);
     }
   };
